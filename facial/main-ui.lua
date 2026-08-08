@@ -75,7 +75,8 @@ function M.ui(functions)
         orientation = "vertical",
         get_buttons(functions.scan_library, functions.review),
         get_settings_button(settings_stack, exe_chooser, functions.get_executable),
-        settings_stack
+        settings_stack,
+        functions.review_widget
     }
 end
 

@@ -105,10 +105,38 @@ local function has(names, wanted)
   return false
 end
 
--- faceid reports the number of faces it found; that is all this needs from the
--- json, so there is no reason to drag in a json parser to read it.
-local function face_count(json)
-  return tonumber(json:match('"face_count"%s*:%s*(%d+)'))
+-- Flatten faceid's json into one table per face. The producer is known and its
+-- face objects are flat, so matching them out beats dragging in a json library:
+-- "faces" is the only array of objects, and %b{} walks them one at a time.
+-- A json null simply fails to match, which leaves the field nil.
+local function parse_faces(json)
+  local faces = {}
+
+  local array = json:match('"faces"%s*:%s*(%b[])')
+  if not array then return faces end
+
+  for obj in array:gmatch("%b{}") do
+    local face = {
+      index      = tonumber(obj:match('"index"%s*:%s*(%-?%d+)')),
+      name       = obj:match('"name"%s*:%s*"(.-)"'),
+      similarity = tonumber(obj:match('"similarity"%s*:%s*([%-%+%d%.eE]+)')),
+      det_score  = tonumber(obj:match('"det_score"%s*:%s*([%-%+%d%.eE]+)')),
+      age        = tonumber(obj:match('"age"%s*:%s*(%-?%d+)')),
+      sex        = obj:match('"sex"%s*:%s*"(.-)"'),
+      crop       = obj:match('"crop"%s*:%s*"(.-)"')
+    }
+
+    local bbox = obj:match('"bbox"%s*:%s*%[(.-)%]')
+    if bbox then
+      local n = {}
+      for v in bbox:gmatch("%-?%d+") do n[#n + 1] = tonumber(v) end
+      face.bbox = { x1 = n[1], y1 = n[2], x2 = n[3], y2 = n[4] }
+    end
+
+    faces[#faces + 1] = face
+  end
+
+  return faces
 end
 
 -- One image: identify, store, tag, and enroll a face whose name we already know.
@@ -134,7 +162,9 @@ local function scan_image(exe, img, tags, stats)
     return
   end
 
-  local stored, store_err = db.store(img.id, json, level)
+  local faces = parse_faces(json)
+
+  local stored, store_err = db.store_faces(img.id, faces, level)
   if not stored then
     dt.print_log(string.format("[facial] could not store %s: %s", original, tostring(store_err)))
     stats.failed = stats.failed + 1
@@ -148,10 +178,9 @@ local function scan_image(exe, img, tags, stats)
   -- one person tagged, one face detected. faceid itself refuses to guess on a
   -- group photo, and a wrong enrollment quietly poisons every later match.
   local people = people_on(names)
-  local faces = face_count(json) or 0
   local identified = has(names, M.IDENTIFIED_TAG)
 
-  if #people == 1 and faces == 1 then
+  if #people == 1 and #faces == 1 then
     local _, enroll_err = run(shq(exe) .. " enroll " .. shq(path) .. " " .. shq(people[1]))
     if enroll_err then
       dt.print_log(string.format("[facial] enroll failed for %s as '%s': %s",
@@ -163,7 +192,7 @@ local function scan_image(exe, img, tags, stats)
     end
   elseif #people > 0 then
     dt.print_log(string.format("[facial] %s: %d person tag(s) and %d face(s), too ambiguous to enroll",
-                               original, #people, faces))
+                               original, #people, #faces))
   end
 
   if not identified then

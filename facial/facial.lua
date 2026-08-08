@@ -6,6 +6,7 @@ local folder = this_module and this_module:match("^(.*[/\\])") or ""
 local dt = require "darktable"
 local main = require(folder .. "main-ui")
 local scanner = require(folder .. "scan_library")
+local reviewer = require(folder .. "review")
 
 -- --- CONFIG ----------------------------------------------------------------
 local MODULE   = "facial"          -- preference namespace / lib name
@@ -27,24 +28,19 @@ local function set_executable(path)
   dt.preferences.write(MODULE, PREF_EXE, "file", path or "")
 end
 
--- --- actions ---------------------------------------------------------------
-
-
-local function review()
-  -- TODO: implement
-  dt.print("facial: review not implemented yet.")
-end
-
 -- --- UI assembly & registration --------------------------------------------
 
 local functions = {
   -- wrapped so the button's own widget argument is dropped and the executable
   -- accessor is passed through instead
   scan_library = function() scanner.scan_library(get_executable) end,
-  review = review,
+  review = function() reviewer.start(get_executable) end,
   get_executable = get_executable,
   set_executable = set_executable
 }
+
+-- the review widgets live with the code that writes to them
+functions.review_widget = reviewer.build(functions)
 
 dt.register_lib(
   MODULE, "facial", true, false,
