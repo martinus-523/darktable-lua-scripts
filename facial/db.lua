@@ -60,6 +60,7 @@ local function ensure_schema()
     CREATE TABLE IF NOT EXISTS scans (
       imgid      INTEGER PRIMARY KEY,
       json       TEXT NOT NULL,
+      level      INTEGER,
       scanned_at TEXT NOT NULL
     );
   ]])
@@ -71,41 +72,49 @@ local function ensure_schema()
 end
 
 -- --- api -------------------------------------------------------------------
--- Store (or replace) the scanner's json for one image.
+-- Store (or replace) the scanner's json for one image, together with the mipmap
+-- level the scan was run against -- the json's coordinates are in that
+-- rendering's pixel space, so they mean nothing without it.
 -- Returns true, or false plus a message.
-function M.store(imgid, json)
+function M.store(imgid, json, level)
   if type(imgid) ~= "number" then return false, "imgid must be a number" end
   if type(json) ~= "string" then return false, "json must be a string" end
+  if level ~= nil and type(level) ~= "number" then return false, "level must be a number" end
 
   local ok, err = ensure_schema()
   if not ok then return false, err end
 
   local lines
   lines, err = run_sql(string.format(
-    "INSERT OR REPLACE INTO scans (imgid, json, scanned_at) VALUES (%d, %s, %s);",
-    imgid, sqlq(json), sqlq(os.date("!%Y-%m-%dT%H:%M:%SZ"))))
+    "INSERT OR REPLACE INTO scans (imgid, json, level, scanned_at) VALUES (%d, %s, %s, %s);",
+    imgid, sqlq(json), level and string.format("%d", level) or "NULL",
+    sqlq(os.date("!%Y-%m-%dT%H:%M:%SZ"))))
   if not lines then return false, err end
   if #lines > 0 then return false, table.concat(lines, "\n") end
 
   return true
 end
 
--- The stored json for one image, or nil when it has not been scanned.
--- Returns nil plus a message when the lookup itself failed.
+-- The stored json for one image plus the level it was scanned at, or nil when
+-- it has not been scanned. Returns nil plus a message when the lookup failed.
 function M.get(imgid)
   if type(imgid) ~= "number" then return nil, "imgid must be a number" end
 
   local ok, err = ensure_schema()
   if not ok then return nil, err end
 
+  -- Two statements in one go: the level lands on the first line, the json on
+  -- everything after it. Reading both as one row would need a separator, and
+  -- any separator can also occur inside the json.
   local lines
-  lines, err = run_sql(string.format("SELECT json FROM scans WHERE imgid = %d;", imgid))
+  lines, err = run_sql(string.format(
+    "SELECT level FROM scans WHERE imgid = %d; SELECT json FROM scans WHERE imgid = %d;",
+    imgid, imgid))
   if not lines then return nil, err end
   if #lines == 0 then return nil end
 
-  -- One column of one row, so everything printed is the value; json holding
-  -- newlines comes back as several lines and is rejoined here.
-  return table.concat(lines, "\n")
+  -- json holding newlines comes back as several lines and is rejoined here.
+  return table.concat(lines, "\n", 2), tonumber(lines[1])
 end
 
 return M

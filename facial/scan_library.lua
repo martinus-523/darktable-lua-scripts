@@ -8,6 +8,7 @@ local folder = this_module and this_module:match("^(.*[/\\])") or ""
 
 local dt = require "darktable"
 local db = require(folder .. "db")
+local mipmap = require(folder .. "mipmap")
 
 local M = {}
 
@@ -112,20 +113,30 @@ end
 
 -- One image: identify, store, tag, and enroll a face whose name we already know.
 local function scan_image(exe, img, tags, stats)
-  local path = image_path(img)
+  local original = image_path(img)          -- only ever used in messages
   local names = tag_names(img)
+
+  -- Everything is read from darktable's cached rendering, never from the file
+  -- on disk. An image without one is left alone rather than falling back to the
+  -- original, so it is picked up again once darktable has drawn its thumbnail.
+  local path, level = mipmap.get_cached_image(img)
+  if not path then
+    dt.print_log("[facial] no cached rendering yet for " .. original .. ", skipped")
+    stats.uncached = stats.uncached + 1
+    return
+  end
 
   local json, err = run(shq(exe) .. " identify " .. shq(path))
   if not json or not json:match("^%s*{") then
-    dt.print_log(string.format("[facial] identify failed for %s: %s",
-                               path, err or json or "no output"))
+    dt.print_log(string.format("[facial] identify failed for %s (cache level %d): %s",
+                               original, level, err or json or "no output"))
     stats.failed = stats.failed + 1
     return
   end
 
-  local stored, store_err = db.store(img.id, json)
+  local stored, store_err = db.store(img.id, json, level)
   if not stored then
-    dt.print_log(string.format("[facial] could not store %s: %s", path, tostring(store_err)))
+    dt.print_log(string.format("[facial] could not store %s: %s", original, tostring(store_err)))
     stats.failed = stats.failed + 1
     return
   end
@@ -144,7 +155,7 @@ local function scan_image(exe, img, tags, stats)
     local _, enroll_err = run(shq(exe) .. " enroll " .. shq(path) .. " " .. shq(people[1]))
     if enroll_err then
       dt.print_log(string.format("[facial] enroll failed for %s as '%s': %s",
-                                 path, people[1], enroll_err))
+                                 original, people[1], enroll_err))
     else
       dt.tags.attach(tags.identified, img)
       identified = true
@@ -152,7 +163,7 @@ local function scan_image(exe, img, tags, stats)
     end
   elseif #people > 0 then
     dt.print_log(string.format("[facial] %s: %d person tag(s) and %d face(s), too ambiguous to enroll",
-                               path, #people, faces))
+                               original, #people, faces))
   end
 
   if not identified then
@@ -189,7 +200,7 @@ function M.scan_library(get_executable)
   local job = dt.gui.create_job("facial: scanning library", true,
                                 function() cancelled = true end)
 
-  local stats = { scanned = 0, enrolled = 0, review = 0, failed = 0 }
+  local stats = { scanned = 0, enrolled = 0, review = 0, failed = 0, uncached = 0 }
 
   for i, img in ipairs(unscanned) do
     if cancelled then break end
@@ -200,8 +211,8 @@ function M.scan_library(get_executable)
   if job.valid then job.valid = false end
 
   local summary = string.format(
-    "facial: scanned %d of %d image(s) -- %d enrolled, %d to review, %d failed%s",
-    stats.scanned, #unscanned, stats.enrolled, stats.review, stats.failed,
+    "facial: scanned %d of %d image(s) -- %d enrolled, %d to review, %d failed, %d not cached yet%s",
+    stats.scanned, #unscanned, stats.enrolled, stats.review, stats.failed, stats.uncached,
     cancelled and " (cancelled)" or "")
   dt.print(summary)
   dt.print_log("[facial] " .. summary)
