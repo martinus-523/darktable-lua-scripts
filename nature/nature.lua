@@ -10,7 +10,7 @@
 local dt = require "darktable"
 
 local MODULE = "nature"
-local NATURE_PREFIX = "Nature|"
+local NATURE_PREFIX = "Nature"
 
 dt.preferences.register(
   MODULE, "remove_on_accept", "bool",
@@ -26,7 +26,7 @@ local function artemis_prefix()
   local p = dt.preferences.read("artemis", "prefix", "string") or ""
   p = p:gsub("%s+$", ""):gsub("|+$", "")
   if p == "" then p = "Artemis" end
-  return p .. "|"
+  return p
 end
 
 local function starts_with(name, prefix)
@@ -35,12 +35,12 @@ end
 
 -- the image's Artemis| tags, and whether any Nature| tag is present
 local function review_state(image)
-  local prefix = artemis_prefix()
+  local prefix = artemis_prefix() .. "|"
   local artemis_tags, has_nature = {}, false
   for _, tag in ipairs(dt.tags.get_tags(image)) do
     if starts_with(tag.name, prefix) then
       artemis_tags[#artemis_tags + 1] = tag
-    elseif starts_with(tag.name, NATURE_PREFIX) then
+    elseif starts_with(tag.name, NATURE_PREFIX .. "|") then
       has_nature = true
     end
   end
@@ -105,7 +105,8 @@ local function update_panel()
 
   local image = selection[1]
   local artemis_tags, has_nature = review_state(image)
-  local prefix = artemis_prefix()
+  local root = artemis_prefix()
+  local prefix = root .. "|"
 
   -- show each identification with the root stripped, one per line
   local lines = {}
@@ -115,7 +116,7 @@ local function update_panel()
   tags_view.text = table.concat(lines, "\n")
 
   if #artemis_tags == 0 then
-    status_label.label = "no " .. prefix .. " tags on this image"
+    status_label.label = "no " .. root .. " tags on this image"
     accept_button.sensitive = false
     reject_button.sensitive = false
   elseif has_nature then
@@ -132,14 +133,14 @@ end
 -- accept works on the whole selection; every image only receives copies of
 -- its own Artemis| tags, and already reviewed / untagged images are skipped
 local function accept()
-  local prefix = artemis_prefix()
+  local prefix = artemis_prefix() .. "|"
   local remove_artemis = dt.preferences.read(MODULE, "remove_on_accept", "bool")
   local accepted_images, accepted_tags = 0, 0
   for _, image in ipairs(dt.gui.selection()) do
     local artemis_tags = reviewable(image)
     if artemis_tags then
       for _, tag in ipairs(artemis_tags) do
-        local nature_tag = dt.tags.create(NATURE_PREFIX .. tag.name:sub(#prefix + 1))
+        local nature_tag = dt.tags.create(NATURE_PREFIX .. "|" .. tag.name:sub(#prefix + 1))
         dt.tags.attach(nature_tag, image)
         if remove_artemis then dt.tags.detach(tag, image) end
       end
