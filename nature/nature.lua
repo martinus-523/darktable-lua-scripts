@@ -2,15 +2,23 @@
 --
 -- Adds a "nature" panel to the lighttable that shows the Artemis| tags of
 -- the selected image and lets you accept or reject the identification:
--- accept copies each Artemis| tag as a Nature| tag (the Artemis| ones stay,
--- marking the image as reviewed), reject detaches the Artemis| tags. Both
--- buttons are disabled when there is nothing to review — no Artemis| tags,
--- or Nature| tags already present.
+-- accept copies each Artemis| tag as a Nature| tag and, by default, detaches
+-- the Artemis| ones (a preference can keep them instead), reject detaches
+-- the Artemis| tags. Both buttons are disabled when there is nothing to
+-- review — no Artemis| tags, or Nature| tags already present.
 
 local dt = require "darktable"
 
 local MODULE = "nature"
 local NATURE_PREFIX = "Nature|"
+
+dt.preferences.register(
+  MODULE, "remove_on_accept", "bool",
+  "nature: remove artemis tags on accept",
+  "After copying the identifications as " .. NATURE_PREFIX .. " tags, also "
+  .. "detach the artemis tags from the image; disable to keep them",
+  true
+)
 
 -- artemis's root is configurable; read the same preference so nature follows
 -- it, with the same fallback as artemis.lua
@@ -125,6 +133,7 @@ end
 -- its own Artemis| tags, and already reviewed / untagged images are skipped
 local function accept()
   local prefix = artemis_prefix()
+  local remove_artemis = dt.preferences.read(MODULE, "remove_on_accept", "bool")
   local accepted_images, accepted_tags = 0, 0
   for _, image in ipairs(dt.gui.selection()) do
     local artemis_tags = reviewable(image)
@@ -132,6 +141,7 @@ local function accept()
       for _, tag in ipairs(artemis_tags) do
         local nature_tag = dt.tags.create(NATURE_PREFIX .. tag.name:sub(#prefix + 1))
         dt.tags.attach(nature_tag, image)
+        if remove_artemis then dt.tags.detach(tag, image) end
       end
       accepted_images = accepted_images + 1
       accepted_tags = accepted_tags + #artemis_tags
@@ -157,7 +167,9 @@ end
 
 accept_button = dt.new_widget("button") {
   label = "accept",
-  tooltip = "copy the " .. artemis_prefix() .. " tags as " .. NATURE_PREFIX .. " tags",
+  tooltip = "copy the " .. artemis_prefix() .. " tags as " .. NATURE_PREFIX
+    .. " tags (a preference controls whether the " .. artemis_prefix()
+    .. " tags are removed)",
   sensitive = false,
   clicked_callback = accept,
 }

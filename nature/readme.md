@@ -14,8 +14,9 @@ English › Birds › Perching Birds › Tits and Chickadees › Great Tit
 ```
 
 - **accept** copies each `Artemis|` tag as a `Nature|` tag
-  (`Artemis|Scientific|Aves|…` → `Nature|Scientific|Aves|…`). The `Artemis|`
-  tags stay on the image; their presence next to `Nature|` tags marks the
+  (`Artemis|Scientific|Aves|…` → `Nature|Scientific|Aves|…`) and removes the
+  `Artemis|` tags. Disable the *remove artemis tags on accept* preference
+  (lua options) to keep them instead; either way the `Nature|` tags mark the
   image as reviewed.
 - **reject** removes the `Artemis|` tags from the image.
 
