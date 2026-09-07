@@ -28,7 +28,8 @@ distant gull silhouette.
 
 ## Nature
 Nature is a review companion for Artemis: a lighttable panel that shows the
-`Artemis|` tags of the selected image and lets you **accept** them (each tag
-is copied under `Nature|` instead of `Artemis|`) or **reject** them (the
-`Artemis|` tags are removed). The buttons are disabled when the image has no
-`Artemis|` tags, or already carries `Nature|` tags from an earlier review.
+`Artemis` tags of the selected image and lets you **accept** them (each tag
+is copied under `Nature` instead of `Artemis`) or **reject** them (the
+`Artemis` tags are removed). The buttons are disabled when the image has no
+`Artemis` tags, or already carries `Nature` tags from an earlier review.
+Artemis can be configured to ignore images already tagged with `Nature`.
