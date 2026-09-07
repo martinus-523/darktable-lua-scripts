@@ -20,7 +20,7 @@ with a SigLIP model via OpenCLIP. Each label is scored independently
 Usage:
     uv run tagger.py --in paths.txt --out tags.json \
         [--threshold 0.001 --topk-scene 3 --topk-object 8 --topk-extra 3
-         --batch 16]
+         --batch 16 --progress progress.txt]
 
 paths.txt holds one image path per line. Labels are emitted as the
 hierarchical tag paths from vocabulary.tsv. Output JSON:
@@ -58,6 +58,17 @@ RAW_EXTENSIONS = {
 
 def warn(msg):
     print(f"tagger: {msg}", file=sys.stderr, flush=True)
+
+
+def write_progress(path, done, total):
+    """Overwrite the progress file with "done total"; the Lua script polls
+    it to drive darktable's progress bar. Never let it break a run."""
+    if not path:
+        return
+    try:
+        Path(path).write_text(f"{done} {total}\n")
+    except OSError:
+        pass
 
 
 def pick_device(torch):
@@ -156,12 +167,16 @@ def main():
                              "any custom groups (default 3)")
     parser.add_argument("--batch", type=int, default=16,
                         help="images per inference batch (default 16)")
+    parser.add_argument("--progress", default=None,
+                        help="file to overwrite with 'done total' counts "
+                             "while processing (drives the progress bar)")
     args = parser.parse_args()
 
     paths = [p for p in Path(args.infile).read_text().splitlines() if p.strip()]
     if not paths:
         Path(args.outfile).write_text("{}\n")
         return
+    write_progress(args.progress, 0, len(paths))
 
     import torch
     import open_clip
@@ -216,18 +231,19 @@ def main():
         batch_paths.clear()
         batch_tensors.clear()
 
-    done = 0
-    for path in paths:
+    for done, path in enumerate(paths, 1):
         img = load_image(path)
         if img is None:
+            write_progress(args.progress, done, len(paths))
             continue
         batch_paths.append(path)
         batch_tensors.append(preprocess(img))
         if len(batch_tensors) >= args.batch:
             flush()
-            done += args.batch
+            write_progress(args.progress, done, len(paths))
             warn(f"processed {done}/{len(paths)}")
     flush()
+    write_progress(args.progress, len(paths), len(paths))
 
     Path(args.outfile).write_text(json.dumps(results, indent=1) + "\n")
     warn(f"tagged {len(results)} of {len(paths)} images -> {args.outfile}")

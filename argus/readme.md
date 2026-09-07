@@ -72,7 +72,8 @@ Select images in the lighttable and press the **auto tag (SigLIP)** button in
 the *selected image[s]* panel (or assign the shortcut of the same name). The
 first run is slow (environment + model download); after that, images are
 tagged in batches on the GPU if one is available (CUDA or Apple Silicon),
-otherwise on the CPU.
+otherwise on the CPU. A progress bar in darktable's lower-left corner tracks
+the run; it stays at 0% while the model loads, which dominates the first run.
 
 Preferences (*preferences → lua options*):
 
@@ -102,7 +103,8 @@ The tagger is a plain CLI and works without darktable:
 
 ```sh
 uv run tagger.py --in paths.txt --out tags.json \
-    [--threshold 0.001 --topk-scene 3 --topk-object 8 --topk-extra 3 --batch 16]
+    [--threshold 0.001 --topk-scene 3 --topk-object 8 --topk-extra 3 --batch 16
+     --progress progress.txt]
 ```
 
 `paths.txt` holds one image path per line; unreadable files are skipped with

@@ -1,0 +1,33 @@
+# nature
+
+A small review companion for [artemis](../artemis/readme.md). Artemis attaches
+its identifications as `Artemis|…` tags; nature lets you go through the images
+one by one and accept or reject what was found.
+
+Enable `nature/nature.lua` in darktable's script manager; a **nature** panel
+appears on the right side of the lighttable. Select a single image and the
+panel shows its Artemis identifications, e.g.
+
+```
+Scientific › Aves › Passeriformes › Paridae › Parus major
+English › Birds › Perching Birds › Tits and Chickadees › Great Tit
+```
+
+- **accept** copies each `Artemis|` tag as a `Nature|` tag
+  (`Artemis|Scientific|Aves|…` → `Nature|Scientific|Aves|…`). The `Artemis|`
+  tags stay on the image; their presence next to `Nature|` tags marks the
+  image as reviewed.
+- **reject** removes the `Artemis|` tags from the image.
+
+Both buttons are disabled when there is nothing to review: the image has no
+`Artemis|` tags, or it already carries `Nature|` tags (i.e. it was accepted
+earlier).
+
+With several images selected the panel switches to batch mode: it shows how
+many of them are still up for review and **accept** processes the whole
+selection — each image gets copies of *its own* `Artemis|` tags only, and
+untagged or already reviewed images are skipped. Rejecting stays a per-image
+decision, so **reject** is disabled in batch mode.
+
+Nature follows the *tag prefix* preference of artemis, so if you changed the
+Artemis root there, nature looks for tags under that root instead.

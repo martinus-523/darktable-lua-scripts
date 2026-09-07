@@ -1,9 +1,13 @@
--- argus.lua — zero-shot image tagging with SigLIP
+-- artemis.lua — animal & bird species identification with BioCLIP 2.5
 --
--- Runs tagger.py (via uv) on the selected images and attaches the resulting
--- labels as hierarchical tags under Argus| (e.g. Argus|Animals|Dog,
--- Argus|Location|Indoor|Kitchen, Argus|Light|Sunset — see data/vocabulary.tsv).
--- Everything runs locally; see readme.md for the one-time uv setup.
+-- Runs tagger.py (via uv) on the selected images and attaches the predicted
+-- taxonomy as hierarchical tags under Artemis| — by default one scientific
+-- and one English tag per identification, e.g.
+-- Artemis|Scientific|Aves|Passeriformes|Paridae|Parus major and
+-- Artemis|English|Birds|Perching Birds|Tits and Chickadees|Great Tit. The tagger
+-- only descends the taxonomy as far as it is confident, so an unclear photo
+-- may end at order or family level. Everything runs locally; see readme.md
+-- for the one-time uv setup (the first run downloads ~7 GB of model data).
 
 local this_module = ...
 local folder = this_module and this_module:match("^(.*[/\\])") or ""
@@ -20,18 +24,14 @@ if script_dir:sub(1, 1) ~= "/" and not script_dir:match("^%a:[/\\]") then
   script_dir = dt.configuration.config_dir .. "/lua/" .. script_dir
 end
 
-local MODULE = "argus"
-local DEFAULT_PREFIX = "Argus"
-
--- the tagger emits full hierarchy paths ("Objects|Vehicles|Car"); we only
--- root them under the configurable prefix (default Argus|) so machine tags
--- stay recognizable
+local MODULE = "artemis"
+local DEFAULT_PREFIX = "Artemis"
 
 -- --- preferences ------------------------------------------------------------
 
 dt.preferences.register(
   MODULE, "prefix", "string",
-  "argus: tag prefix",
+  "artemis: tag prefix",
   "Root under which all tags are attached, without the trailing | "
   .. "(empty = " .. DEFAULT_PREFIX .. "). Also used to detect already "
   .. "tagged images, so tags made with an older prefix are not recognized",
@@ -39,45 +39,46 @@ dt.preferences.register(
 )
 
 dt.preferences.register(
-  MODULE, "capitalize_prefix", "bool",
-  "argus: capitalize tag prefix",
-  "Force the first letter of the tag prefix to a capital "
-  .. "(unchecked forces it to lowercase)",
-  true
+  MODULE, "scope", "enum",
+  "artemis: taxa scope",
+  "Which part of the Tree of Life may become tags: all animals, only birds, "
+  .. "or every kingdom (also plants, fungi, …)",
+  "animals", "animals", "birds", "all"
+)
+
+dt.preferences.register(
+  MODULE, "tag_style", "enum",
+  "artemis: tag style",
+  "'separate' attaches two tags per identification: a scientific tree "
+  .. "(Scientific|Aves|…|Parus major) and an English tree "
+  .. "(English|Birds|…|Great Tit); 'scientific' or 'english' attach only "
+  .. "one of them; 'combined' is a scientific tree ending in "
+  .. "'Parus major (Great Tit)' without such a branch. English names "
+  .. "fall back to the scientific ones where none are known",
+  "separate", "separate", "scientific", "english", "combined"
 )
 
 dt.preferences.register(
   MODULE, "threshold", "float",
-  "argus: score threshold",
-  "Minimum score (0-1) for a label to become a tag; SigLIP scores generic "
-  .. "labels low, correct ones usually land between 0.001 and 0.3",
-  0.001, 0.0, 1.0, 0.001
+  "artemis: confidence threshold",
+  "Minimum probability (0-1) for a taxonomic rank to be tagged; the tagger "
+  .. "descends class, order, family, genus, species and stops at the "
+  .. "deepest rank still above this value. Below it at class level already, "
+  .. "the image gets no tag (probably no animal in it)",
+  0.3, 0.0, 1.0, 0.05
 )
 
 dt.preferences.register(
-  MODULE, "topk_scene", "integer",
-  "argus: max scene tags",
-  "At most this many Places365 scene tags per image",
-  3, 0, 20
-)
-
-dt.preferences.register(
-  MODULE, "topk_object", "integer",
-  "argus: max object tags",
-  "At most this many OpenImages object tags per image",
-  8, 0, 50
-)
-
-dt.preferences.register(
-  MODULE, "topk_extra", "integer",
-  "argus: max extra tags",
-  "At most this many tags from the user-editable extra list per image",
-  3, 0, 20
+  MODULE, "topk", "integer",
+  "artemis: max species tags",
+  "At most this many species tags per image, for photos with several "
+  .. "confidently identified species in frame",
+  1, 1, 10
 )
 
 dt.preferences.register(
   MODULE, "skip_tagged", "bool",
-  "argus: skip already tagged images",
+  "artemis: skip already tagged images",
   "Leave out images that already carry any tag under the configured prefix",
   true
 )
@@ -89,8 +90,8 @@ local function quote(arg)
 end
 
 -- number-to-string that ignores the locale (a Dutch locale would otherwise
--- render 0.15 as "0,15" and break the tagger's argument parsing) and trims
--- float32 noise like 0.0010000000474975 from preference values
+-- render 0.3 as "0,3" and break the tagger's argument parsing) and trims
+-- float32 noise from preference values
 local function fmt_num(x)
   return (string.format("%.6g", x):gsub(",", "."))
 end
@@ -116,21 +117,15 @@ local function tagger_path()
   return script_dir .. "tagger.py"
 end
 
--- the configured tag root including the trailing "|", e.g. "Argus|"
+-- the configured tag root including the trailing "|", e.g. "Artemis|"
 local function tag_prefix()
   local p = dt.preferences.read(MODULE, "prefix", "string") or ""
   p = p:gsub("%s+$", ""):gsub("|+$", "")
   if p == "" then p = DEFAULT_PREFIX end
-  local first = p:sub(1, 1)
-  if dt.preferences.read(MODULE, "capitalize_prefix", "bool") then
-    first = first:upper()
-  else
-    first = first:lower()
-  end
-  return first .. p:sub(2) .. "|"
+  return p .. "|"
 end
 
-local function has_argus_tag(image, prefix)
+local function has_artemis_tag(image, prefix)
   for _, tag in ipairs(dt.tags.get_tags(image)) do
     if tag.name:sub(1, #prefix) == prefix then return true end
   end
@@ -149,7 +144,7 @@ end
 
 local function tag_images(images)
   if #images == 0 then
-    dt.print("argus: no images selected")
+    dt.print("artemis: no images selected")
     return
   end
 
@@ -159,26 +154,26 @@ local function tag_images(images)
   local skip_tagged = dt.preferences.read(MODULE, "skip_tagged", "bool")
   local paths = {}
   for _, image in ipairs(images) do
-    if not (skip_tagged and has_argus_tag(image, prefix)) then
+    if not (skip_tagged and has_artemis_tag(image, prefix)) then
       local path = image.path .. "/" .. image.filename
       paths[#paths + 1] = path
       by_path[path] = image
     end
   end
   if #paths == 0 then
-    dt.print("argus: all selected images already have " .. prefix .. " tags")
+    dt.print("artemis: all selected images already have " .. prefix .. " tags")
     return
   end
 
   local tmp = dt.configuration.tmp_dir
-  local paths_file = tmp .. "/argus-paths.txt"
-  local json_file = tmp .. "/argus-tags.json"
-  local log_file = tmp .. "/argus.log"
-  local progress_file = tmp .. "/argus-progress.txt"
+  local paths_file = tmp .. "/artemis-paths.txt"
+  local json_file = tmp .. "/artemis-tags.json"
+  local log_file = tmp .. "/artemis.log"
+  local progress_file = tmp .. "/artemis-progress.txt"
 
   local f = io.open(paths_file, "w")
   if not f then
-    dt.print("argus: cannot write " .. paths_file)
+    dt.print("artemis: cannot write " .. paths_file)
     return
   end
   f:write(table.concat(paths, "\n"), "\n")
@@ -191,21 +186,22 @@ local function tag_images(images)
     "--in", quote(paths_file),
     "--out", quote(json_file),
     "--threshold", fmt_num(dt.preferences.read(MODULE, "threshold", "float")),
-    "--topk-scene", fmt_num(dt.preferences.read(MODULE, "topk_scene", "integer")),
-    "--topk-object", fmt_num(dt.preferences.read(MODULE, "topk_object", "integer")),
-    "--topk-extra", fmt_num(dt.preferences.read(MODULE, "topk_extra", "integer")),
+    "--topk", fmt_num(dt.preferences.read(MODULE, "topk", "integer")),
+    "--scope", dt.preferences.read(MODULE, "scope", "enum"),
+    "--tag-style", dt.preferences.read(MODULE, "tag_style", "enum"),
     "--progress", quote(progress_file),
   }, " ") .. " 2> " .. quote(log_file)
 
-  dt.print(string.format("argus: tagging %d image(s)…", #paths))
-  dt.print_log("argus: " .. command)
+  dt.print(string.format("artemis: identifying species in %d image(s)…",
+                         #paths))
+  dt.print_log("artemis: " .. command)
 
   -- dt.control.execute yields this coroutine while the tagger runs, so a
   -- dispatched sibling can poll the progress file the tagger overwrites
   -- after every batch and move a progress bar (bottom left). The bar sits
   -- at 0% while the model loads, which dominates the very first run.
   local job = dt.gui.create_job(
-    string.format("argus: tagging %d image(s)", #paths), true)
+    string.format("artemis: identifying species in %d image(s)", #paths), true)
   local finished = false
   dt.control.dispatch(function()
     while not finished do
@@ -223,55 +219,53 @@ local function tag_images(images)
   job.valid = false
 
   if rc ~= 0 then
-    dt.print("argus: tagger failed (exit " .. rc .. "), see " .. log_file)
+    dt.print("artemis: tagger failed (exit " .. rc .. "), see " .. log_file)
     return
   end
 
   local content = read_file(json_file)
   if not content then
-    dt.print("argus: tagger produced no output, see " .. log_file)
+    dt.print("artemis: tagger produced no output, see " .. log_file)
     return
   end
   local ok, results = pcall(json.decode, content)
   if not ok or type(results) ~= "table" then
-    dt.print("argus: cannot parse tagger output: " .. tostring(results))
+    dt.print("artemis: cannot parse tagger output: " .. tostring(results))
     return
   end
 
   local tagged, attached = 0, 0
-  for path, groups in pairs(results) do
+  for path, entries in pairs(results) do
     local image = by_path[path]
     if image then
       local any = false
-      for _, group_entries in pairs(groups) do
-        for _, entry in ipairs(group_entries) do
-          local tag = dt.tags.create(prefix .. entry[1])
-          dt.tags.attach(tag, image)
-          attached = attached + 1
-          any = true
-        end
+      for _, entry in ipairs(entries) do
+        local tag = dt.tags.create(prefix .. entry[1])
+        dt.tags.attach(tag, image)
+        attached = attached + 1
+        any = true
       end
       if any then tagged = tagged + 1 end
     end
   end
 
   dt.print(string.format(
-    "argus: attached %d tag(s) to %d of %d image(s)",
+    "artemis: attached %d tag(s) to %d of %d image(s)",
     attached, tagged, #paths))
 end
 
 -- --- registration -----------------------------------------------------------
 
 dt.gui.libs.image.register_action(
-  MODULE, "argus: auto tag",
+  MODULE, "artemis: identify species",
   function(_, images) tag_images(images) end,
-  "tag the selected images with Places365 scenes and OpenImages objects"
+  "identify animal and bird species with BioCLIP and tag their taxonomy"
 )
 
 dt.register_event(
   MODULE, "shortcut",
   function() tag_images(dt.gui.action_images) end,
-  "argus: auto tag selected images"
+  "artemis: identify species in selected images"
 )
 
-dt.print_log("argus.lua loaded.")
+dt.print_log("artemis.lua loaded.")
