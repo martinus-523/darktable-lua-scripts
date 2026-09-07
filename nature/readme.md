@@ -32,3 +32,9 @@ decision, so **reject** is disabled in batch mode.
 
 Nature follows the *tag prefix* preference of artemis, so if you changed the
 Artemis root there, nature looks for tags under that root instead.
+
+The `Nature` root is configurable too, via nature's own *tag prefix*
+preference (lua options). It is also used to detect already reviewed images —
+both here and by artemis, which skips accepted images when scanning — so
+after changing it, images accepted under the old prefix count as unreviewed
+again.

@@ -83,6 +83,11 @@ Preferences (*preferences → lua options*):
 Note that "skip already tagged" matches the *current* prefix — after changing
 the prefix, images tagged under the old one are treated as untagged.
 
+Images with any tag under the nature prefix (`Nature` by default, configurable
+in the nature module's preferences) are always skipped, regardless of the
+preferences above: those identifications were already accepted in the nature
+review panel (see the nature module).
+
 Species-level accuracy is genuinely good for birds, mammals, butterflies and
 other well-photographed groups, but among 800k taxa confusable sibling
 species exist everywhere — treat a species tag as a strong suggestion, and

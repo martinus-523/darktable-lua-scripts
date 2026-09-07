@@ -6,8 +6,11 @@
 -- Artemis|Scientific|Aves|Passeriformes|Paridae|Parus major and
 -- Artemis|English|Birds|Perching Birds|Tits and Chickadees|Great Tit. The tagger
 -- only descends the taxonomy as far as it is confident, so an unclear photo
--- may end at order or family level. Everything runs locally; see readme.md
--- for the one-time uv setup (the first run downloads ~7 GB of model data).
+-- may end at order or family level. Images already accepted in the nature
+-- review panel (any tag under nature's prefix, Nature| by default) are never
+-- scanned. Everything runs
+-- locally; see readme.md for the one-time uv setup (the first run downloads
+-- ~7 GB of model data).
 
 local this_module = ...
 local folder = this_module and this_module:match("^(.*[/\\])") or ""
@@ -132,6 +135,28 @@ local function has_artemis_tag(image, prefix)
   return false
 end
 
+-- images with tags under nature's root have been accepted in the nature
+-- review panel and are never scanned again; nature's prefix is configurable,
+-- so read the same preference with the same fallback as nature.lua
+local function nature_prefix()
+  local p = dt.preferences.read("nature", "prefix", "string") or ""
+  p = p:gsub("%s+$", ""):gsub("|+$", "")
+  if p == "" then p = "Nature" end
+  return p
+end
+
+-- true when the image carries the nature root tag itself or anything under it
+local function has_nature_tag(image)
+  local root = nature_prefix()
+  local prefix = root .. "|"
+  for _, tag in ipairs(dt.tags.get_tags(image)) do
+    if tag.name == root or tag.name:sub(1, #prefix) == prefix then
+      return true
+    end
+  end
+  return false
+end
+
 local function read_file(path)
   local f = io.open(path, "r")
   if not f then return nil end
@@ -154,14 +179,15 @@ local function tag_images(images)
   local skip_tagged = dt.preferences.read(MODULE, "skip_tagged", "bool")
   local paths = {}
   for _, image in ipairs(images) do
-    if not (skip_tagged and has_artemis_tag(image, prefix)) then
+    if not has_nature_tag(image)
+        and not (skip_tagged and has_artemis_tag(image, prefix)) then
       local path = image.path .. "/" .. image.filename
       paths[#paths + 1] = path
       by_path[path] = image
     end
   end
   if #paths == 0 then
-    dt.print("artemis: all selected images already have " .. prefix .. " tags")
+    dt.print("artemis: all selected images are already tagged or accepted")
     return
   end
 
