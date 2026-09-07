@@ -1,0 +1,995 @@
+# argus vocabulary — one row per label:  <label> TAB <group> TAB <tag path>
+#
+#   label:  the text the model scores (prompt: "a photo of a <label>")
+#   group:  scene | object | extra — each group has its own top-k cap
+#   path:   hierarchy the tag is attached under, rooted at the tag prefix (default Argus|)
+#           (e.g. "Landscape|Lake" becomes the tag Argus|Landscape|Lake)
+#
+# Add your own terms as group "extra". Blank lines and # comments are ignored.
+Airfield	scene	Location|Outdoor|Airfield
+Airplane cabin	scene	Location|Indoor|Airplane cabin
+Airport terminal	scene	Location|Indoor|Airport terminal
+Alcove	scene	Location|Indoor|Alcove
+Alley	scene	Location|Outdoor|Alley
+Amphitheater	scene	Location|Outdoor|Amphitheater
+Amusement arcade	scene	Location|Indoor|Amusement arcade
+Amusement park	scene	Location|Outdoor|Amusement park
+Apartment building outdoor	scene	Location|Outdoor|Apartment building
+Aquarium	scene	Location|Indoor|Aquarium
+Aqueduct	scene	Location|Outdoor|Aqueduct
+Arcade	scene	Location|Indoor|Arcade
+Arch	scene	Location|Outdoor|Arch
+Archaelogical excavation	scene	Location|Outdoor|Archaeological excavation
+Archive	scene	Location|Indoor|Archive
+Arena hockey	scene	Location|Indoor|Hockey arena
+Arena performance	scene	Location|Indoor|Performance arena
+Arena rodeo	scene	Location|Outdoor|Rodeo arena
+Army base	scene	Location|Outdoor|Army base
+Art gallery	scene	Location|Indoor|Art gallery
+Art school	scene	Location|Indoor|Art school
+Art studio	scene	Location|Indoor|Art studio
+Artists loft	scene	Location|Indoor|Artists loft
+Assembly line	scene	Location|Indoor|Assembly line
+Athletic field outdoor	scene	Location|Outdoor|Athletic field
+Atrium public	scene	Location|Indoor|Atrium
+Attic	scene	Location|Indoor|Attic
+Auditorium	scene	Location|Indoor|Auditorium
+Auto factory	scene	Location|Indoor|Auto factory
+Auto showroom	scene	Location|Indoor|Auto showroom
+Badlands	scene	Landscape|Badlands
+Bakery shop	scene	Location|Indoor|Bakery shop
+Balcony exterior	scene	Location|Outdoor|Balcony
+Balcony interior	scene	Location|Indoor|Balcony
+Ball pit	scene	Location|Indoor|Ball pit
+Ballroom	scene	Location|Indoor|Ballroom
+Bamboo forest	scene	Landscape|Bamboo forest
+Bank vault	scene	Location|Indoor|Bank vault
+Banquet hall	scene	Location|Indoor|Banquet hall
+Bar	scene	Location|Indoor|Bar
+Barn	scene	Location|Outdoor|Barn
+Barndoor	scene	Objects|Barn door
+Baseball field	scene	Location|Outdoor|Baseball field
+Basement	scene	Location|Indoor|Basement
+Basketball court indoor	scene	Location|Indoor|Basketball court
+Bathroom	scene	Location|Indoor|Bathroom
+Bazaar indoor	scene	Location|Indoor|Bazaar
+Bazaar outdoor	scene	Location|Outdoor|Bazaar
+Beach	scene	Landscape|Beach
+Beach house	scene	Location|Outdoor|Beach house
+Beauty salon	scene	Location|Indoor|Beauty salon
+Bedchamber	scene	Location|Indoor|Bedchamber
+Bedroom	scene	Location|Indoor|Bedroom
+Beer garden	scene	Location|Outdoor|Beer garden
+Beer hall	scene	Location|Indoor|Beer hall
+Berth	scene	Location|Indoor|Berth
+Biology laboratory	scene	Location|Indoor|Biology laboratory
+Boardwalk	scene	Location|Outdoor|Boardwalk
+Boat deck	scene	Location|Outdoor|Boat deck
+Boathouse	scene	Location|Outdoor|Boathouse
+Bookstore	scene	Location|Indoor|Bookstore
+Booth indoor	scene	Location|Indoor|Booth
+Botanical garden	scene	Location|Outdoor|Botanical garden
+Bow window indoor	scene	Location|Indoor|Bow window
+Bowling alley	scene	Location|Indoor|Bowling alley
+Boxing ring	scene	Location|Indoor|Boxing ring
+Bridge	scene	Location|Outdoor|Bridge
+Building facade	scene	Location|Outdoor|Building facade
+Bullring	scene	Location|Outdoor|Bullring
+Burial chamber	scene	Location|Indoor|Burial chamber
+Bus interior	scene	Location|Indoor|Bus interior
+Bus station indoor	scene	Location|Indoor|Bus station
+Butchers shop	scene	Location|Outdoor|Butchers shop
+Butte	scene	Landscape|Butte
+Cabin outdoor	scene	Location|Outdoor|Cabin
+Cafeteria	scene	Location|Indoor|Cafeteria
+Campsite	scene	Location|Outdoor|Campsite
+Campus	scene	Location|Outdoor|Campus
+Canal natural	scene	Landscape|Canal
+Canal urban	scene	Location|Outdoor|Canal
+Candy store	scene	Location|Indoor|Candy store
+Canyon	scene	Landscape|Canyon
+Car interior	scene	Location|Indoor|Car interior
+Carrousel	scene	Location|Outdoor|Carrousel
+Castle	scene	Location|Outdoor|Castle
+Catacomb	scene	Location|Indoor|Catacomb
+Cemetery	scene	Location|Outdoor|Cemetery
+Chalet	scene	Location|Outdoor|Chalet
+Chemistry lab	scene	Location|Indoor|Chemistry lab
+Childs room	scene	Location|Indoor|Childs room
+Church indoor	scene	Location|Indoor|Church
+Church outdoor	scene	Location|Outdoor|Church
+Classroom	scene	Location|Indoor|Classroom
+Clean room	scene	Location|Indoor|Clean room
+Cliff	scene	Landscape|Cliff
+Closet	scene	Objects|Furniture|Closet
+Clothing store	scene	Location|Indoor|Clothing store
+Coast	scene	Landscape|Coast
+Cockpit	scene	Location|Indoor|Cockpit
+Coffee shop	scene	Location|Indoor|Coffee shop
+Computer room	scene	Location|Indoor|Computer room
+Conference center	scene	Location|Indoor|Conference center
+Conference room	scene	Location|Indoor|Conference room
+Construction site	scene	Location|Outdoor|Construction site
+Corn field	scene	Landscape|Corn field
+Corral	scene	Location|Outdoor|Corral
+Corridor	scene	Location|Indoor|Corridor
+Cottage	scene	Location|Outdoor|Cottage
+Courthouse	scene	Location|Outdoor|Courthouse
+Courtyard	scene	Location|Outdoor|Courtyard
+Creek	scene	Landscape|Creek
+Crevasse	scene	Landscape|Crevasse
+Crosswalk	scene	Location|Outdoor|Crosswalk
+Dam	scene	Location|Outdoor|Dam
+Delicatessen	scene	Location|Indoor|Delicatessen
+Department store	scene	Location|Indoor|Department store
+Desert sand	scene	Landscape|Desert
+Desert vegetation	scene	Landscape|Desert vegetation
+Desert road	scene	Landscape|Desert road
+Diner outdoor	scene	Location|Outdoor|Diner
+Dining hall	scene	Location|Indoor|Dining hall
+Dining room	scene	Location|Indoor|Dining room
+Discotheque	scene	Location|Indoor|Discotheque
+Doorway outdoor	scene	Location|Outdoor|Doorway
+Dorm room	scene	Location|Indoor|Dorm room
+Downtown	scene	Location|Outdoor|Downtown
+Dressing room	scene	Location|Indoor|Dressing room
+Driveway	scene	Location|Outdoor|Driveway
+Drugstore	scene	Location|Indoor|Drugstore
+Elevator door	scene	Location|Indoor|Elevator door
+Elevator lobby	scene	Location|Indoor|Elevator lobby
+Elevator shaft	scene	Location|Indoor|Elevator shaft
+Embassy	scene	Location|Outdoor|Embassy
+Engine room	scene	Location|Indoor|Engine room
+Entrance hall	scene	Location|Indoor|Entrance hall
+Escalator indoor	scene	Location|Indoor|Escalator
+Excavation	scene	Location|Outdoor|Excavation
+Fabric store	scene	Location|Indoor|Fabric store
+Farm	scene	Location|Outdoor|Farm
+Fastfood restaurant	scene	Location|Indoor|Fastfood restaurant
+Field cultivated	scene	Landscape|Cultivated field
+Field wild	scene	Landscape|Wild field
+Field road	scene	Landscape|Field road
+Fire escape	scene	Location|Outdoor|Fire escape
+Fire station	scene	Location|Outdoor|Fire station
+Fishpond	scene	Location|Outdoor|Fishpond
+Flea market indoor	scene	Location|Indoor|Flea market
+Florist shop indoor	scene	Location|Indoor|Florist shop
+Food court	scene	Location|Indoor|Food court
+Football field	scene	Location|Outdoor|Football field
+Forest broadleaf	scene	Landscape|Broadleaf forest
+Forest path	scene	Landscape|Forest path
+Forest road	scene	Landscape|Forest road
+Formal garden	scene	Location|Outdoor|Formal garden
+Fountain	scene	Location|Outdoor|Fountain
+Galley	scene	Location|Indoor|Galley
+Garage indoor	scene	Location|Indoor|Garage
+Garage outdoor	scene	Location|Outdoor|Garage
+Gas station	scene	Location|Outdoor|Gas station
+Gazebo exterior	scene	Location|Outdoor|Gazebo
+General store indoor	scene	Location|Indoor|General store
+General store outdoor	scene	Location|Outdoor|General store
+Gift shop	scene	Location|Indoor|Gift shop
+Glacier	scene	Landscape|Glacier
+Golf course	scene	Location|Outdoor|Golf course
+Greenhouse indoor	scene	Location|Indoor|Greenhouse
+Greenhouse outdoor	scene	Location|Outdoor|Greenhouse
+Grotto	scene	Landscape|Grotto
+Gymnasium indoor	scene	Location|Indoor|Gymnasium
+Hangar indoor	scene	Location|Indoor|Hangar
+Hangar outdoor	scene	Location|Outdoor|Hangar
+Harbor	scene	Location|Outdoor|Harbor
+Hardware store	scene	Location|Indoor|Hardware store
+Hayfield	scene	Landscape|Hayfield
+Heliport	scene	Location|Outdoor|Heliport
+Highway	scene	Location|Outdoor|Highway
+Home office	scene	Location|Indoor|Home office
+Home theater	scene	Location|Indoor|Home theater
+Hospital	scene	Location|Outdoor|Hospital
+Hospital room	scene	Location|Indoor|Hospital room
+Hot spring	scene	Landscape|Hot spring
+Hotel outdoor	scene	Location|Outdoor|Hotel
+Hotel room	scene	Location|Indoor|Hotel room
+House	scene	Location|Outdoor|House
+Hunting lodge outdoor	scene	Location|Outdoor|Hunting lodge
+Ice cream parlor	scene	Location|Indoor|Ice cream parlor
+Ice floe	scene	Landscape|Ice floe
+Ice shelf	scene	Landscape|Ice shelf
+Ice skating rink indoor	scene	Location|Indoor|Ice skating rink
+Ice skating rink outdoor	scene	Location|Outdoor|Ice skating rink
+Iceberg	scene	Landscape|Iceberg
+Igloo	scene	Location|Outdoor|Igloo
+Industrial area	scene	Location|Outdoor|Industrial area
+Inn outdoor	scene	Location|Outdoor|Inn
+Islet	scene	Landscape|Islet
+Jacuzzi indoor	scene	Location|Indoor|Jacuzzi
+Jail cell	scene	Location|Indoor|Jail cell
+Japanese garden	scene	Location|Outdoor|Japanese garden
+Jewelry shop	scene	Location|Indoor|Jewelry shop
+Junkyard	scene	Location|Outdoor|Junkyard
+Kasbah	scene	Location|Outdoor|Kasbah
+Kennel outdoor	scene	Location|Outdoor|Kennel
+Kindergarden classroom	scene	Location|Indoor|Kindergarden classroom
+Kitchen	scene	Location|Indoor|Kitchen
+Lagoon	scene	Landscape|Lagoon
+Lake natural	scene	Landscape|Lake
+Landfill	scene	Location|Outdoor|Landfill
+Landing deck	scene	Location|Outdoor|Landing deck
+Laundromat	scene	Location|Indoor|Laundromat
+Lawn	scene	Location|Outdoor|Lawn
+Lecture room	scene	Location|Indoor|Lecture room
+Legislative chamber	scene	Location|Indoor|Legislative chamber
+Library indoor	scene	Location|Indoor|Library
+Library outdoor	scene	Location|Outdoor|Library
+Lighthouse	scene	Location|Outdoor|Lighthouse
+Living room	scene	Location|Indoor|Living room
+Loading dock	scene	Location|Outdoor|Loading dock
+Lobby	scene	Location|Indoor|Lobby
+Lock chamber	scene	Location|Outdoor|Lock chamber
+Locker room	scene	Location|Indoor|Locker room
+Mansion	scene	Location|Outdoor|Mansion
+Manufactured home	scene	Location|Outdoor|Manufactured home
+Market indoor	scene	Location|Indoor|Market
+Market outdoor	scene	Location|Outdoor|Market
+Marsh	scene	Landscape|Marsh
+Martial arts gym	scene	Location|Indoor|Martial arts gym
+Mausoleum	scene	Location|Outdoor|Mausoleum
+Medina	scene	Location|Outdoor|Medina
+Mezzanine	scene	Location|Indoor|Mezzanine
+Moat water	scene	Location|Outdoor|Moat
+Mosque outdoor	scene	Location|Outdoor|Mosque
+Motel	scene	Location|Outdoor|Motel
+Mountain	scene	Landscape|Mountain
+Mountain path	scene	Landscape|Mountain path
+Mountain snowy	scene	Landscape|Snowy mountain
+Movie theater indoor	scene	Location|Indoor|Movie theater
+Museum indoor	scene	Location|Indoor|Museum
+Museum outdoor	scene	Location|Outdoor|Museum
+Music studio	scene	Location|Indoor|Music studio
+Natural history museum	scene	Location|Indoor|Natural history museum
+Nursery	scene	Location|Indoor|Nursery
+Nursing home	scene	Location|Indoor|Nursing home
+Oast house	scene	Location|Outdoor|Oast house
+Ocean	scene	Landscape|Ocean
+Office	scene	Location|Indoor|Office
+Office building	scene	Location|Outdoor|Office building
+Office cubicles	scene	Location|Indoor|Office cubicles
+Oilrig	scene	Location|Outdoor|Oilrig
+Operating room	scene	Location|Indoor|Operating room
+Orchard	scene	Landscape|Orchard
+Orchestra pit	scene	Location|Indoor|Orchestra pit
+Pagoda	scene	Location|Outdoor|Pagoda
+Palace	scene	Location|Outdoor|Palace
+Pantry	scene	Location|Indoor|Pantry
+Park	scene	Location|Outdoor|Park
+Parking garage indoor	scene	Location|Indoor|Parking garage
+Parking garage outdoor	scene	Location|Outdoor|Parking garage
+Parking lot	scene	Location|Outdoor|Parking lot
+Pasture	scene	Landscape|Pasture
+Patio	scene	Location|Outdoor|Patio
+Pavilion	scene	Location|Outdoor|Pavilion
+Pet shop	scene	Location|Indoor|Pet shop
+Pharmacy	scene	Location|Indoor|Pharmacy
+Phone booth	scene	Location|Outdoor|Phone booth
+Physics laboratory	scene	Location|Indoor|Physics laboratory
+Picnic area	scene	Location|Outdoor|Picnic area
+Pier	scene	Location|Outdoor|Pier
+Pizzeria	scene	Location|Indoor|Pizzeria
+Playground	scene	Location|Outdoor|Playground
+Playroom	scene	Location|Indoor|Playroom
+Plaza	scene	Location|Outdoor|Plaza
+Pond	scene	Landscape|Pond
+Porch	scene	Location|Outdoor|Porch
+Promenade	scene	Location|Outdoor|Promenade
+Pub indoor	scene	Location|Indoor|Pub
+Racecourse	scene	Location|Outdoor|Racecourse
+Raceway	scene	Location|Outdoor|Raceway
+Raft	scene	Objects|Vehicles|Raft
+Railroad track	scene	Location|Outdoor|Railroad track
+Rainforest	scene	Landscape|Rainforest
+Reception	scene	Location|Indoor|Reception
+Recreation room	scene	Location|Indoor|Recreation room
+Repair shop	scene	Location|Indoor|Repair shop
+Residential neighborhood	scene	Location|Outdoor|Residential neighborhood
+Restaurant	scene	Location|Indoor|Restaurant
+Restaurant kitchen	scene	Location|Indoor|Restaurant kitchen
+Restaurant patio	scene	Location|Outdoor|Restaurant patio
+Rice paddy	scene	Landscape|Rice paddy
+River	scene	Landscape|River
+Rock arch	scene	Landscape|Rock arch
+Roof garden	scene	Location|Outdoor|Roof garden
+Rope bridge	scene	Location|Outdoor|Rope bridge
+Ruin	scene	Location|Outdoor|Ruin
+Runway	scene	Location|Outdoor|Runway
+Sandbox	scene	Location|Outdoor|Sandbox
+Sauna	scene	Location|Indoor|Sauna
+Schoolhouse	scene	Location|Outdoor|Schoolhouse
+Science museum	scene	Location|Indoor|Science museum
+Server room	scene	Location|Indoor|Server room
+Shed	scene	Location|Outdoor|Shed
+Shoe shop	scene	Location|Indoor|Shoe shop
+Shopfront	scene	Location|Outdoor|Shopfront
+Shopping mall indoor	scene	Location|Indoor|Shopping mall
+Shower	scene	Location|Indoor|Shower
+Ski resort	scene	Location|Outdoor|Ski resort
+Ski slope	scene	Location|Outdoor|Ski slope
+Sky	scene	Landscape|Sky
+Skyscraper	scene	Location|Outdoor|Skyscraper
+Slum	scene	Location|Outdoor|Slum
+Snowfield	scene	Landscape|Snowfield
+Soccer field	scene	Location|Outdoor|Soccer field
+Stable	scene	Location|Outdoor|Stable
+Stadium baseball	scene	Location|Outdoor|Baseball stadium
+Stadium football	scene	Location|Outdoor|Football stadium
+Stadium soccer	scene	Location|Outdoor|Soccer stadium
+Stage indoor	scene	Location|Indoor|Stage
+Stage outdoor	scene	Location|Outdoor|Stage
+Staircase	scene	Location|Indoor|Staircase
+Storage room	scene	Location|Indoor|Storage room
+Street	scene	Location|Outdoor|Street
+Subway station platform	scene	Location|Indoor|Subway station platform
+Supermarket	scene	Location|Indoor|Supermarket
+Sushi bar	scene	Location|Indoor|Sushi bar
+Swamp	scene	Landscape|Swamp
+Swimming hole	scene	Landscape|Swimming hole
+Swimming pool indoor	scene	Location|Indoor|Swimming pool
+Swimming pool outdoor	scene	Location|Outdoor|Swimming pool
+Synagogue outdoor	scene	Location|Outdoor|Synagogue
+Television room	scene	Location|Indoor|Television room
+Television studio	scene	Location|Indoor|Television studio
+Temple asia	scene	Location|Outdoor|Temple
+Throne room	scene	Location|Indoor|Throne room
+Ticket booth	scene	Location|Indoor|Ticket booth
+Topiary garden	scene	Location|Outdoor|Topiary garden
+Tower	scene	Location|Outdoor|Tower
+Toyshop	scene	Location|Indoor|Toyshop
+Train interior	scene	Location|Indoor|Train interior
+Train station platform	scene	Location|Outdoor|Train station platform
+Tree farm	scene	Landscape|Tree farm
+Tree house	scene	Location|Outdoor|Tree house
+Trench	scene	Location|Outdoor|Trench
+Tundra	scene	Landscape|Tundra
+Underwater ocean deep	scene	Landscape|Underwater
+Utility room	scene	Location|Indoor|Utility room
+Valley	scene	Landscape|Valley
+Vegetable garden	scene	Location|Outdoor|Vegetable garden
+Veterinarians office	scene	Location|Indoor|Veterinarians office
+Viaduct	scene	Location|Outdoor|Viaduct
+Village	scene	Location|Outdoor|Village
+Vineyard	scene	Landscape|Vineyard
+Volcano	scene	Landscape|Volcano
+Volleyball court outdoor	scene	Location|Outdoor|Volleyball court
+Waiting room	scene	Location|Indoor|Waiting room
+Water park	scene	Location|Outdoor|Water park
+Water tower	scene	Location|Outdoor|Water tower
+Waterfall	scene	Landscape|Waterfall
+Watering hole	scene	Landscape|Watering hole
+Wave	scene	Landscape|Wave
+Wet bar	scene	Location|Indoor|Wet bar
+Wheat field	scene	Landscape|Wheat field
+Wind farm	scene	Location|Outdoor|Wind farm
+Windmill	scene	Location|Outdoor|Windmill
+Yard	scene	Location|Outdoor|Yard
+Youth hostel	scene	Location|Indoor|Youth hostel
+Zen garden	scene	Location|Outdoor|Zen garden
+Accordion	object	Objects|Music|Accordion
+Adhesive tape	object	Objects|Office & Stationery|Adhesive tape
+Aircraft	object	Objects|Vehicles|Aircraft
+Alarm clock	object	Objects|Electronics|Alarm clock
+Alpaca	object	Animals|Alpaca
+Ambulance	object	Objects|Vehicles|Ambulance
+Animal	object	Animals|Animal
+Ant	object	Animals|Ant
+Antelope	object	Animals|Antelope
+Apple	object	Food & Drink|Apple
+Armadillo	object	Animals|Armadillo
+Artichoke	object	Food & Drink|Artichoke
+Auto part	object	Objects|Vehicles|Auto part
+Axe	object	Objects|Tools|Axe
+Backpack	object	Objects|Clothing & Accessories|Backpack
+Bagel	object	Food & Drink|Bagel
+Baked goods	object	Food & Drink|Baked goods
+Balance beam	object	Objects|Sports|Balance beam
+Ball (Object)	object	Objects|Sports|Ball
+Balloon	object	Objects|Toys|Balloon
+Banana	object	Food & Drink|Banana
+Band-aid	object	Objects|Medical|Band-aid
+Banjo	object	Objects|Music|Banjo
+Barge	object	Objects|Vehicles|Barge
+Barrel	object	Objects|Barrel
+Baseball bat	object	Objects|Sports|Baseball bat
+Baseball glove	object	Objects|Sports|Baseball glove
+Bat (Animal)	object	Animals|Bat
+Bathroom accessory	object	Objects|Household|Bathroom accessory
+Bathroom cabinet	object	Objects|Furniture|Bathroom cabinet
+Bathtub	object	Objects|Household|Bathtub
+Beaker	object	Objects|Beaker
+Bear	object	Animals|Bear
+Beard	object	People|Beard
+Bed	object	Objects|Furniture|Bed
+Bee	object	Animals|Bee
+Beehive	object	Objects|Beehive
+Beer	object	Food & Drink|Beer
+Beetle	object	Animals|Beetle
+Bell pepper	object	Food & Drink|Bell pepper
+Belt	object	Objects|Clothing & Accessories|Belt
+Bench	object	Objects|Furniture|Bench
+Bicycle	object	Objects|Vehicles|Bicycle
+Bicycle helmet	object	Objects|Clothing & Accessories|Bicycle helmet
+Bicycle wheel	object	Objects|Vehicles|Bicycle wheel
+Bidet	object	Objects|Household|Bidet
+Billboard	object	Objects|Signs & Street|Billboard
+Billiard table	object	Objects|Sports|Billiard table
+Binoculars	object	Objects|Binoculars
+Bird	object	Animals|Bird
+Blender	object	Objects|Kitchen & Dining|Blender
+Blue jay	object	Animals|Blue jay
+Boat	object	Objects|Vehicles|Boat
+Bomb	object	Objects|Weapons|Bomb
+Book	object	Objects|Book
+Bookcase	object	Objects|Furniture|Bookcase
+Boot	object	Objects|Clothing & Accessories|Boot
+Bottle	object	Objects|Kitchen & Dining|Bottle
+Bottle opener	object	Objects|Kitchen & Dining|Bottle opener
+Bow and arrow	object	Objects|Sports|Bow and arrow
+Bowl	object	Objects|Kitchen & Dining|Bowl
+Bowling equipment	object	Objects|Sports|Bowling equipment
+Box	object	Objects|Box
+Boy	object	People|Boy
+Brassiere	object	Objects|Clothing & Accessories|Brassiere
+Bread	object	Food & Drink|Bread
+Briefcase	object	Objects|Clothing & Accessories|Briefcase
+Broccoli	object	Food & Drink|Broccoli
+Bronze sculpture	object	Objects|Art & Decor|Bronze sculpture
+Brown bear	object	Animals|Brown bear
+Building	object	Location|Outdoor|Building
+Bull	object	Animals|Bull
+Burrito	object	Food & Drink|Burrito
+Bus	object	Objects|Vehicles|Bus
+Bust	object	Objects|Art & Decor|Bust
+Butterfly	object	Animals|Butterfly
+Cabbage	object	Food & Drink|Cabbage
+Cabinetry	object	Objects|Furniture|Cabinetry
+Cake	object	Food & Drink|Cake
+Cake stand	object	Objects|Kitchen & Dining|Cake stand
+Calculator	object	Objects|Electronics|Calculator
+Camel	object	Animals|Camel
+Camera	object	Objects|Electronics|Camera
+Can opener	object	Objects|Kitchen & Dining|Can opener
+Canary	object	Animals|Canary
+Candle	object	Objects|Household|Candle
+Candy	object	Food & Drink|Candy
+Cannon	object	Objects|Weapons|Cannon
+Canoe	object	Objects|Vehicles|Canoe
+Cantaloupe	object	Food & Drink|Cantaloupe
+Car	object	Objects|Vehicles|Car
+Carnivore	object	Animals|Carnivore
+Carrot	object	Food & Drink|Carrot
+Cart	object	Objects|Vehicles|Cart
+Cassette deck	object	Objects|Electronics|Cassette deck
+Castle	object	Location|Outdoor|Castle
+Cat	object	Animals|Cat
+Cat furniture	object	Objects|Furniture|Cat furniture
+Caterpillar	object	Animals|Caterpillar
+Cattle	object	Animals|Cattle
+Ceiling fan	object	Objects|Household|Ceiling fan
+Cello	object	Objects|Music|Cello
+Centipede	object	Animals|Centipede
+Chainsaw	object	Objects|Tools|Chainsaw
+Chair	object	Objects|Furniture|Chair
+Cheese	object	Food & Drink|Cheese
+Cheetah	object	Animals|Cheetah
+Chest of drawers	object	Objects|Furniture|Chest of drawers
+Chicken	object	Animals|Chicken
+Chime	object	Objects|Music|Chime
+Chisel	object	Objects|Tools|Chisel
+Chopsticks	object	Objects|Kitchen & Dining|Chopsticks
+Christmas tree	object	Plants|Christmas tree
+Clock	object	Objects|Household|Clock
+Closet	object	Objects|Furniture|Closet
+Clothing	object	Objects|Clothing & Accessories|Clothing
+Coat	object	Objects|Clothing & Accessories|Coat
+Cocktail	object	Food & Drink|Cocktail
+Cocktail shaker	object	Objects|Kitchen & Dining|Cocktail shaker
+Coconut	object	Food & Drink|Coconut
+Coffee (drink)	object	Food & Drink|Coffee
+Coffee cup	object	Objects|Kitchen & Dining|Coffee cup
+Coffee table	object	Objects|Furniture|Coffee table
+Coffeemaker	object	Objects|Kitchen & Dining|Coffeemaker
+Coin	object	Objects|Coin
+Common fig	object	Food & Drink|Fig
+Common sunflower	object	Plants|Sunflower
+Computer keyboard	object	Objects|Electronics|Computer keyboard
+Computer monitor	object	Objects|Electronics|Computer monitor
+Computer mouse	object	Objects|Electronics|Computer mouse
+Container	object	Objects|Container
+Convenience store	object	Location|Outdoor|Convenience store
+Cookie	object	Food & Drink|Cookie
+Cooking spray	object	Objects|Kitchen & Dining|Cooking spray
+Corded phone	object	Objects|Electronics|Corded phone
+Cosmetics	object	Objects|Personal Care|Cosmetics
+Couch	object	Objects|Furniture|Couch
+Countertop	object	Objects|Furniture|Countertop
+Cowboy hat	object	Objects|Clothing & Accessories|Cowboy hat
+Crab	object	Animals|Crab
+Cream	object	Food & Drink|Cream
+Cricket ball	object	Objects|Sports|Cricket ball
+Crocodile	object	Animals|Crocodile
+Croissant	object	Food & Drink|Croissant
+Crown	object	Objects|Clothing & Accessories|Crown
+Crutch	object	Objects|Medical|Crutch
+Cucumber	object	Food & Drink|Cucumber
+Cupboard	object	Objects|Furniture|Cupboard
+Curtain	object	Objects|Household|Curtain
+Cutting board	object	Objects|Kitchen & Dining|Cutting board
+Dagger	object	Objects|Weapons|Dagger
+Dairy Product	object	Food & Drink|Dairy product
+Deer	object	Animals|Deer
+Desk	object	Objects|Furniture|Desk
+Dessert	object	Food & Drink|Dessert
+Diaper	object	Objects|Personal Care|Diaper
+Dice	object	Objects|Toys|Dice
+Digital clock	object	Objects|Electronics|Digital clock
+Dinosaur	object	Animals|Dinosaur
+Dishwasher	object	Objects|Kitchen & Dining|Dishwasher
+Dog	object	Animals|Dog
+Dog bed	object	Objects|Furniture|Dog bed
+Doll	object	Objects|Toys|Doll
+Dolphin	object	Animals|Dolphin
+Door	object	Objects|Household|Door
+Door handle	object	Objects|Household|Door handle
+Doughnut	object	Food & Drink|Doughnut
+Dragonfly	object	Animals|Dragonfly
+Drawer	object	Objects|Furniture|Drawer
+Dress	object	Objects|Clothing & Accessories|Dress
+Drill (Tool)	object	Objects|Tools|Drill
+Drink	object	Food & Drink|Drink
+Drinking straw	object	Objects|Kitchen & Dining|Drinking straw
+Drum	object	Objects|Music|Drum
+Duck	object	Animals|Duck
+Dumbbell	object	Objects|Sports|Dumbbell
+Eagle	object	Animals|Eagle
+Earring	object	Objects|Clothing & Accessories|Earring
+Egg	object	Food & Drink|Egg
+Elephant	object	Animals|Elephant
+Envelope	object	Objects|Office & Stationery|Envelope
+Eraser	object	Objects|Office & Stationery|Eraser
+Face powder	object	Objects|Personal Care|Face powder
+Facial tissue holder	object	Objects|Household|Facial tissue holder
+Falcon	object	Animals|Falcon
+Fashion accessory	object	Objects|Clothing & Accessories|Fashion accessory
+Fast food	object	Food & Drink|Fast food
+Fax	object	Objects|Electronics|Fax
+Fedora	object	Objects|Clothing & Accessories|Fedora
+Filing cabinet	object	Objects|Furniture|Filing cabinet
+Fire hydrant	object	Objects|Signs & Street|Fire hydrant
+Fireplace	object	Objects|Household|Fireplace
+Fish	object	Animals|Fish
+Fixed-wing aircraft	object	Objects|Vehicles|Fixed-wing aircraft
+Flag	object	Objects|Flag
+Flashlight	object	Objects|Tools|Flashlight
+Flower	object	Plants|Flower
+Flowerpot	object	Objects|Household|Flowerpot
+Flute	object	Objects|Music|Flute
+Flying disc	object	Objects|Sports|Flying disc
+Food	object	Food & Drink|Food
+Food processor	object	Objects|Kitchen & Dining|Food processor
+Football	object	Objects|Sports|Football
+Football helmet	object	Objects|Sports|Football helmet
+Footwear	object	Objects|Clothing & Accessories|Footwear
+Fork	object	Objects|Kitchen & Dining|Fork
+Fountain	object	Location|Outdoor|Fountain
+Fox	object	Animals|Fox
+French fries	object	Food & Drink|French fries
+French horn	object	Objects|Music|French horn
+Frog	object	Animals|Frog
+Fruit	object	Food & Drink|Fruit
+Frying pan	object	Objects|Kitchen & Dining|Frying pan
+Furniture	object	Objects|Furniture|Furniture
+Garden Asparagus	object	Food & Drink|Garden Asparagus
+Gas stove	object	Objects|Kitchen & Dining|Gas stove
+Giraffe	object	Animals|Giraffe
+Girl	object	People|Girl
+Glasses	object	Objects|Clothing & Accessories|Glasses
+Glove	object	Objects|Clothing & Accessories|Glove
+Goat	object	Animals|Goat
+Goggles	object	Objects|Clothing & Accessories|Goggles
+Goldfish	object	Animals|Goldfish
+Golf ball	object	Objects|Sports|Golf ball
+Golf cart	object	Objects|Vehicles|Golf cart
+Gondola	object	Objects|Vehicles|Gondola
+Goose	object	Animals|Goose
+Grape	object	Food & Drink|Grape
+Grapefruit	object	Food & Drink|Grapefruit
+Grinder	object	Objects|Tools|Grinder
+Guacamole	object	Food & Drink|Guacamole
+Guitar	object	Objects|Music|Guitar
+Hair dryer	object	Objects|Household|Hair dryer
+Hair spray	object	Objects|Personal Care|Hair spray
+Hamburger	object	Food & Drink|Hamburger
+Hammer	object	Objects|Tools|Hammer
+Hamster	object	Animals|Hamster
+Hand dryer	object	Objects|Household|Hand dryer
+Handbag	object	Objects|Clothing & Accessories|Handbag
+Handgun	object	Objects|Weapons|Handgun
+Harbor seal	object	Animals|Harbor seal
+Harmonica	object	Objects|Music|Harmonica
+Harp	object	Objects|Music|Harp
+Harpsichord	object	Objects|Music|Harpsichord
+Hat	object	Objects|Clothing & Accessories|Hat
+Headphones	object	Objects|Electronics|Headphones
+Heater	object	Objects|Household|Heater
+Hedgehog	object	Animals|Hedgehog
+Helicopter	object	Objects|Vehicles|Helicopter
+Helmet	object	Objects|Clothing & Accessories|Helmet
+High heels	object	Objects|Clothing & Accessories|High heels
+Hiking equipment	object	Objects|Sports|Hiking equipment
+Hippopotamus	object	Animals|Hippopotamus
+Home appliance	object	Objects|Household|Home appliance
+Honeycomb	object	Food & Drink|Honeycomb
+Horizontal bar	object	Objects|Sports|Horizontal bar
+Horse	object	Animals|Horse
+Hot dog	object	Food & Drink|Hot dog
+House	object	Location|Outdoor|House
+Houseplant	object	Plants|Houseplant
+Human arm	object	People|Human arm
+Human body	object	People|Human body
+Human ear	object	People|Human ear
+Human eye	object	People|Human eye
+Human face	object	People|Human face
+Human foot	object	People|Human foot
+Human hair	object	People|Human hair
+Human hand	object	People|Human hand
+Human head	object	People|Human head
+Human leg	object	People|Human leg
+Human mouth	object	People|Human mouth
+Human nose	object	People|Human nose
+Humidifier	object	Objects|Household|Humidifier
+Ice cream	object	Food & Drink|Ice cream
+Indoor rower	object	Objects|Sports|Indoor rower
+Infant bed	object	Objects|Furniture|Infant bed
+Insect	object	Animals|Insect
+Invertebrate	object	Animals|Invertebrate
+Ipod	object	Objects|Electronics|Ipod
+Isopod	object	Animals|Isopod
+Jacket	object	Objects|Clothing & Accessories|Jacket
+Jacuzzi	object	Location|Indoor|Jacuzzi
+Jaguar (Animal)	object	Animals|Jaguar
+Jeans	object	Objects|Clothing & Accessories|Jeans
+Jellyfish	object	Animals|Jellyfish
+Jet ski	object	Objects|Vehicles|Jet ski
+Jug	object	Objects|Kitchen & Dining|Jug
+Juice	object	Food & Drink|Juice
+Kangaroo	object	Animals|Kangaroo
+Kettle	object	Objects|Kitchen & Dining|Kettle
+Kitchen & dining room table	object	Objects|Furniture|Kitchen & dining room table
+Kitchen appliance	object	Objects|Kitchen & Dining|Kitchen appliance
+Kitchen knife	object	Objects|Kitchen & Dining|Kitchen knife
+Kitchen utensil	object	Objects|Kitchen & Dining|Kitchen utensil
+Kitchenware	object	Objects|Kitchen & Dining|Kitchenware
+Kite	object	Objects|Toys|Kite
+Knife	object	Objects|Kitchen & Dining|Knife
+Koala	object	Animals|Koala
+Ladder	object	Objects|Tools|Ladder
+Ladle	object	Objects|Kitchen & Dining|Ladle
+Ladybug	object	Animals|Ladybug
+Lamp	object	Objects|Furniture|Lamp
+Land vehicle	object	Objects|Vehicles|Land vehicle
+Lantern	object	Objects|Lantern
+Laptop	object	Objects|Electronics|Laptop
+Lavender (Plant)	object	Plants|Lavender
+Lemon (plant)	object	Food & Drink|Lemon
+Leopard	object	Animals|Leopard
+Light bulb	object	Objects|Electronics|Light bulb
+Light switch	object	Objects|Household|Light switch
+Lighthouse	object	Location|Outdoor|Lighthouse
+Lily	object	Plants|Lily
+Limousine	object	Objects|Vehicles|Limousine
+Lion	object	Animals|Lion
+Lipstick	object	Objects|Personal Care|Lipstick
+Lizard	object	Animals|Lizard
+Lobster	object	Animals|Lobster
+Loveseat	object	Objects|Furniture|Loveseat
+Luggage and bags	object	Objects|Clothing & Accessories|Luggage and bags
+Lynx	object	Animals|Lynx
+Magpie	object	Animals|Magpie
+Mammal	object	Animals|Mammal
+Man	object	People|Man
+Mango	object	Food & Drink|Mango
+Maple	object	Plants|Maple
+Maraca	object	Objects|Music|Maraca
+Marine invertebrates	object	Animals|Marine invertebrates
+Marine mammal	object	Animals|Marine mammal
+Measuring cup	object	Objects|Kitchen & Dining|Measuring cup
+Mechanical fan	object	Objects|Household|Mechanical fan
+Medical equipment	object	Objects|Medical|Medical equipment
+Microphone	object	Objects|Electronics|Microphone
+Microwave oven	object	Objects|Kitchen & Dining|Microwave oven
+Milk	object	Food & Drink|Milk
+Miniskirt	object	Objects|Clothing & Accessories|Miniskirt
+Mirror	object	Objects|Furniture|Mirror
+Missile	object	Objects|Weapons|Missile
+Mixer	object	Objects|Kitchen & Dining|Mixer
+Mixing bowl	object	Objects|Kitchen & Dining|Mixing bowl
+Mobile phone	object	Objects|Electronics|Mobile phone
+Monkey	object	Animals|Monkey
+Moths and butterflies	object	Animals|Moths and butterflies
+Motorcycle	object	Objects|Vehicles|Motorcycle
+Mouse	object	Animals|Mouse
+Muffin	object	Food & Drink|Muffin
+Mug	object	Objects|Kitchen & Dining|Mug
+Mule	object	Animals|Mule
+Mushroom	object	Plants|Mushroom
+Musical instrument	object	Objects|Music|Musical instrument
+Musical keyboard	object	Objects|Music|Musical keyboard
+Nail (Construction)	object	Objects|Tools|Nail
+Necklace	object	Objects|Clothing & Accessories|Necklace
+Nightstand	object	Objects|Furniture|Nightstand
+Oboe	object	Objects|Music|Oboe
+Office building	object	Location|Outdoor|Office building
+Office supplies	object	Objects|Office & Stationery|Office supplies
+Orange (fruit)	object	Food & Drink|Orange
+Organ (Musical Instrument)	object	Objects|Music|Organ
+Ostrich	object	Animals|Ostrich
+Otter	object	Animals|Otter
+Oven	object	Objects|Kitchen & Dining|Oven
+Owl	object	Animals|Owl
+Oyster	object	Animals|Oyster
+Paddle	object	Objects|Sports|Paddle
+Palm tree	object	Plants|Palm tree
+Pancake	object	Food & Drink|Pancake
+Panda	object	Animals|Panda
+Paper cutter	object	Objects|Office & Stationery|Paper cutter
+Paper towel	object	Objects|Household|Paper towel
+Parachute	object	Objects|Sports|Parachute
+Parking meter	object	Objects|Signs & Street|Parking meter
+Parrot	object	Animals|Parrot
+Pasta	object	Food & Drink|Pasta
+Pastry	object	Food & Drink|Pastry
+Peach	object	Food & Drink|Peach
+Pear	object	Food & Drink|Pear
+Pen	object	Objects|Office & Stationery|Pen
+Pencil case	object	Objects|Office & Stationery|Pencil case
+Pencil sharpener	object	Objects|Office & Stationery|Pencil sharpener
+Penguin	object	Animals|Penguin
+Perfume	object	Objects|Personal Care|Perfume
+Person	object	People|Person
+Personal care	object	Objects|Personal Care|Personal care
+Personal flotation device	object	Objects|Sports|Personal flotation device
+Piano	object	Objects|Music|Piano
+Picnic basket	object	Objects|Picnic basket
+Picture frame	object	Objects|Art & Decor|Picture frame
+Pig	object	Animals|Pig
+Pillow	object	Objects|Household|Pillow
+Pineapple	object	Food & Drink|Pineapple
+Pitcher (Container)	object	Objects|Kitchen & Dining|Pitcher
+Pizza	object	Food & Drink|Pizza
+Pizza cutter	object	Objects|Kitchen & Dining|Pizza cutter
+Plant	object	Plants|Plant
+Plastic bag	object	Objects|Plastic bag
+Plate	object	Objects|Kitchen & Dining|Plate
+Platter	object	Objects|Kitchen & Dining|Platter
+Plumbing fixture	object	Objects|Household|Plumbing fixture
+Polar bear	object	Animals|Polar bear
+Pomegranate	object	Food & Drink|Pomegranate
+Popcorn	object	Food & Drink|Popcorn
+Porch	object	Location|Outdoor|Porch
+Porcupine	object	Animals|Porcupine
+Poster	object	Objects|Art & Decor|Poster
+Potato	object	Food & Drink|Potato
+Power plugs and sockets	object	Objects|Household|Power plugs and sockets
+Pressure cooker	object	Objects|Kitchen & Dining|Pressure cooker
+Pretzel	object	Food & Drink|Pretzel
+Printer	object	Objects|Electronics|Printer
+Pumpkin	object	Food & Drink|Pumpkin
+Punching bag	object	Objects|Sports|Punching bag
+Rabbit	object	Animals|Rabbit
+Raccoon	object	Animals|Raccoon
+Racket	object	Objects|Sports|Racket
+Radish	object	Food & Drink|Radish
+Ratchet (Device)	object	Objects|Tools|Ratchet
+Raven	object	Animals|Raven
+Rays and skates	object	Animals|Rays and skates
+Red panda	object	Animals|Red panda
+Refrigerator	object	Objects|Kitchen & Dining|Refrigerator
+Remote control	object	Objects|Electronics|Remote control
+Reptile	object	Animals|Reptile
+Rhinoceros	object	Animals|Rhinoceros
+Rifle	object	Objects|Weapons|Rifle
+Ring binder	object	Objects|Office & Stationery|Ring binder
+Rocket	object	Objects|Vehicles|Rocket
+Roller skates	object	Objects|Sports|Roller skates
+Rose	object	Plants|Rose
+Rugby ball	object	Objects|Sports|Rugby ball
+Ruler	object	Objects|Tools|Ruler
+Salad	object	Food & Drink|Salad
+Salt and pepper shakers	object	Objects|Kitchen & Dining|Salt and pepper shakers
+Sandal	object	Objects|Clothing & Accessories|Sandal
+Sandwich	object	Food & Drink|Sandwich
+Saucer	object	Objects|Kitchen & Dining|Saucer
+Saxophone	object	Objects|Music|Saxophone
+Scale	object	Objects|Scale
+Scarf	object	Objects|Clothing & Accessories|Scarf
+Scissors	object	Objects|Tools|Scissors
+Scoreboard	object	Objects|Sports|Scoreboard
+Scorpion	object	Animals|Scorpion
+Screwdriver	object	Objects|Tools|Screwdriver
+Sculpture	object	Objects|Art & Decor|Sculpture
+Sea lion	object	Animals|Sea lion
+Sea turtle	object	Animals|Sea turtle
+Seafood	object	Food & Drink|Seafood
+Seahorse	object	Animals|Seahorse
+Seat belt	object	Objects|Vehicles|Seat belt
+Segway	object	Objects|Vehicles|Segway
+Serving tray	object	Objects|Kitchen & Dining|Serving tray
+Sewing machine	object	Objects|Household|Sewing machine
+Shark	object	Animals|Shark
+Sheep	object	Animals|Sheep
+Shelf	object	Objects|Furniture|Shelf
+Shellfish	object	Animals|Shellfish
+Shirt	object	Objects|Clothing & Accessories|Shirt
+Shorts	object	Objects|Clothing & Accessories|Shorts
+Shotgun	object	Objects|Weapons|Shotgun
+Shower	object	Location|Indoor|Shower
+Shrimp	object	Animals|Shrimp
+Sink	object	Objects|Household|Sink
+Skateboard	object	Objects|Sports|Skateboard
+Ski	object	Objects|Sports|Ski
+Skirt	object	Objects|Clothing & Accessories|Skirt
+Skull	object	Objects|Skull
+Skunk	object	Animals|Skunk
+Skyscraper	object	Location|Outdoor|Skyscraper
+Slow cooker	object	Objects|Kitchen & Dining|Slow cooker
+Snack	object	Food & Drink|Snack
+Snail	object	Animals|Snail
+Snake	object	Animals|Snake
+Snowboard	object	Objects|Sports|Snowboard
+Snowman	object	Objects|Snowman
+Snowmobile	object	Objects|Vehicles|Snowmobile
+Snowplow	object	Objects|Vehicles|Snowplow
+Soap dispenser	object	Objects|Household|Soap dispenser
+Sock	object	Objects|Clothing & Accessories|Sock
+Sofa bed	object	Objects|Furniture|Sofa bed
+Sombrero	object	Objects|Clothing & Accessories|Sombrero
+Sparrow	object	Animals|Sparrow
+Spatula	object	Objects|Kitchen & Dining|Spatula
+Spice rack	object	Objects|Kitchen & Dining|Spice rack
+Spider	object	Animals|Spider
+Spoon	object	Objects|Kitchen & Dining|Spoon
+Sports equipment	object	Objects|Sports|Sports equipment
+Sports uniform	object	Objects|Clothing & Accessories|Sports uniform
+Squash (Plant)	object	Food & Drink|Squash
+Squid	object	Animals|Squid
+Squirrel	object	Animals|Squirrel
+Stairs	object	Objects|Stairs
+Stapler	object	Objects|Office & Stationery|Stapler
+Starfish	object	Animals|Starfish
+Stationary bicycle	object	Objects|Sports|Stationary bicycle
+Stethoscope	object	Objects|Medical|Stethoscope
+Stool	object	Objects|Furniture|Stool
+Stop sign	object	Objects|Signs & Street|Stop sign
+Strawberry	object	Food & Drink|Strawberry
+Street light	object	Objects|Signs & Street|Street light
+Stretcher	object	Objects|Medical|Stretcher
+Studio couch	object	Objects|Furniture|Studio couch
+Submarine	object	Objects|Vehicles|Submarine
+Submarine sandwich	object	Food & Drink|Submarine sandwich
+Suit	object	Objects|Clothing & Accessories|Suit
+Suitcase	object	Objects|Clothing & Accessories|Suitcase
+Sun hat	object	Objects|Clothing & Accessories|Sun hat
+Sunglasses	object	Objects|Clothing & Accessories|Sunglasses
+Surfboard	object	Objects|Sports|Surfboard
+Sushi	object	Food & Drink|Sushi
+Swan	object	Animals|Swan
+Swim cap	object	Objects|Clothing & Accessories|Swim cap
+Swimming pool	object	Location|Outdoor|Swimming pool
+Swimwear	object	Objects|Clothing & Accessories|Swimwear
+Sword	object	Objects|Weapons|Sword
+Syringe	object	Objects|Medical|Syringe
+Table	object	Objects|Furniture|Table
+Table tennis racket	object	Objects|Sports|Table tennis racket
+Tablet computer	object	Objects|Electronics|Tablet computer
+Tableware	object	Objects|Kitchen & Dining|Tableware
+Taco	object	Food & Drink|Taco
+Tank	object	Objects|Vehicles|Tank
+Tap	object	Objects|Household|Tap
+Tart	object	Food & Drink|Tart
+Taxi	object	Objects|Vehicles|Taxi
+Tea	object	Food & Drink|Tea
+Teapot	object	Objects|Kitchen & Dining|Teapot
+Teddy bear	object	Objects|Toys|Teddy bear
+Telephone	object	Objects|Electronics|Telephone
+Television	object	Objects|Electronics|Television
+Tennis ball	object	Objects|Sports|Tennis ball
+Tennis racket	object	Objects|Sports|Tennis racket
+Tent	object	Objects|Tent
+Tiara	object	Objects|Clothing & Accessories|Tiara
+Tick	object	Animals|Tick
+Tie	object	Objects|Clothing & Accessories|Tie
+Tiger	object	Animals|Tiger
+Tin can	object	Objects|Kitchen & Dining|Tin can
+Tire	object	Objects|Vehicles|Tire
+Toaster	object	Objects|Kitchen & Dining|Toaster
+Toilet	object	Objects|Household|Toilet
+Toilet paper	object	Objects|Household|Toilet paper
+Tomato	object	Food & Drink|Tomato
+Tool	object	Objects|Tools|Tool
+Toothbrush	object	Objects|Personal Care|Toothbrush
+Torch	object	Objects|Tools|Torch
+Tortoise	object	Animals|Tortoise
+Towel	object	Objects|Household|Towel
+Tower	object	Location|Outdoor|Tower
+Toy	object	Objects|Toys|Toy
+Traffic light	object	Objects|Signs & Street|Traffic light
+Traffic sign	object	Objects|Signs & Street|Traffic sign
+Train	object	Objects|Vehicles|Train
+Training bench	object	Objects|Sports|Training bench
+Treadmill	object	Objects|Sports|Treadmill
+Tree	object	Plants|Tree
+Tree house	object	Location|Outdoor|Tree house
+Tripod	object	Objects|Electronics|Tripod
+Trombone	object	Objects|Music|Trombone
+Trousers	object	Objects|Clothing & Accessories|Trousers
+Truck	object	Objects|Vehicles|Truck
+Trumpet	object	Objects|Music|Trumpet
+Turkey	object	Animals|Turkey
+Turtle	object	Animals|Turtle
+Umbrella	object	Objects|Clothing & Accessories|Umbrella
+Unicycle	object	Objects|Vehicles|Unicycle
+Van	object	Objects|Vehicles|Van
+Vase	object	Objects|Household|Vase
+Vegetable	object	Food & Drink|Vegetable
+Vehicle	object	Objects|Vehicles|Vehicle
+Vehicle registration plate	object	Objects|Vehicles|Vehicle registration plate
+Violin	object	Objects|Music|Violin
+Volleyball (Ball)	object	Objects|Sports|Volleyball
+Waffle	object	Food & Drink|Waffle
+Waffle iron	object	Objects|Kitchen & Dining|Waffle iron
+Wall clock	object	Objects|Household|Wall clock
+Wardrobe	object	Objects|Furniture|Wardrobe
+Washing machine	object	Objects|Household|Washing machine
+Waste container	object	Objects|Household|Waste container
+Watch	object	Objects|Clothing & Accessories|Watch
+Watercraft	object	Objects|Vehicles|Watercraft
+Watermelon	object	Food & Drink|Watermelon
+Weapon	object	Objects|Weapons|Weapon
+Whale	object	Animals|Whale
+Wheel	object	Objects|Vehicles|Wheel
+Wheelchair	object	Objects|Vehicles|Wheelchair
+Whisk	object	Objects|Kitchen & Dining|Whisk
+Whiteboard	object	Objects|Office & Stationery|Whiteboard
+Willow	object	Plants|Willow
+Window	object	Objects|Household|Window
+Window blind	object	Objects|Household|Window blind
+Wine	object	Food & Drink|Wine
+Wine glass	object	Objects|Kitchen & Dining|Wine glass
+Wine rack	object	Objects|Kitchen & Dining|Wine rack
+Winter melon	object	Food & Drink|Winter melon
+Wok	object	Objects|Kitchen & Dining|Wok
+Woman	object	People|Woman
+Wood-burning stove	object	Objects|Household|Wood-burning stove
+Woodpecker	object	Animals|Woodpecker
+Worm	object	Animals|Worm
+Wrench	object	Objects|Tools|Wrench
+Zebra	object	Animals|Zebra
+Zucchini	object	Food & Drink|Zucchini
+Sunset	extra	Light|Sunset
+Sunrise	extra	Light|Sunrise
+Golden hour	extra	Light|Golden hour
+Night	extra	Light|Night
+Full moon	extra	Light|Full moon
+Starry sky	extra	Light|Starry sky
+Fireworks	extra	Light|Fireworks
+Fog	extra	Weather|Fog
+Rain	extra	Weather|Rain
+Snow	extra	Weather|Snow
+Storm	extra	Weather|Storm
+Lightning	extra	Weather|Lightning
+Rainbow	extra	Weather|Rainbow
+Forest	extra	Landscape|Forest
+Silhouette	extra	Light|Silhouette
+Reflection	extra	Light|Reflection
+Portrait	extra	People|Portrait
+Autumn	extra	Season|Autumn
+Winter	extra	Season|Winter
+Spring	extra	Season|Spring
+Summer	extra	Season|Summer
