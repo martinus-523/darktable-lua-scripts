@@ -19,16 +19,24 @@ English › Birds › Perching Birds › Tits and Chickadees › Great Tit
   (lua options) to keep them instead; either way the `Nature|` tags mark the
   image as reviewed.
 - **reject** removes the `Artemis|` tags from the image.
+- **identify** starts artemis on the selection without leaving the panel.
+  It is only enabled for images that carry neither `Artemis|` nor `Nature|`
+  tags — an unscanned image, or one whose tags you just rejected (handy for
+  a second opinion after changing artemis's threshold or scope preference).
+  It requires the artemis script to be enabled.
 
-Both buttons are disabled when there is nothing to review: the image has no
-`Artemis|` tags, or it already carries `Nature|` tags (i.e. it was accepted
-earlier).
+Accept and reject are disabled when there is nothing to review: the image has
+no `Artemis|` tags, or it already carries `Nature|` tags (i.e. it was accepted
+earlier). Already reviewed images show their accepted `Nature|` tags in the
+panel instead.
 
 With several images selected the panel switches to batch mode: it shows how
-many of them are still up for review and **accept** processes the whole
-selection — each image gets copies of *its own* `Artemis|` tags only, and
-untagged or already reviewed images are skipped. Rejecting stays a per-image
-decision, so **reject** is disabled in batch mode.
+many of them are still up for review and how many could be identified;
+**accept** processes the whole selection — each image gets copies of *its
+own* `Artemis|` tags only, and untagged or already reviewed images are
+skipped — and **identify** scans all images that have neither `Artemis|` nor
+`Nature|` tags. Rejecting stays a per-image decision, so **reject** is
+disabled in batch mode.
 
 Nature follows the *tag prefix* preference of artemis, so if you changed the
 Artemis root there, nature looks for tags under that root instead.

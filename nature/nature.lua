@@ -5,7 +5,10 @@
 -- accept copies each Artemis| tag as a Nature| tag and, by default, detaches
 -- the Artemis| ones (a preference can keep them instead), reject detaches
 -- the Artemis| tags. Both buttons are disabled when there is nothing to
--- review — no Artemis| tags, or Nature| tags already present.
+-- review — no Artemis| tags, or Nature| tags already present. Already
+-- reviewed images show their accepted Nature| tags instead. An identify
+-- button starts artemis (when its script is enabled) on images that carry
+-- neither Artemis| nor Nature| tags yet.
 
 local dt = require "darktable"
 
@@ -50,19 +53,19 @@ local function starts_with(name, prefix)
   return name:sub(1, #prefix) == prefix
 end
 
--- the image's Artemis| tags, and whether any Nature| tag is present
+-- the image's Artemis| tags and its Nature| tags
 local function review_state(image)
   local prefix = artemis_prefix() .. "|"
   local reviewed_prefix = nature_prefix() .. "|"
-  local artemis_tags, has_nature = {}, false
+  local artemis_tags, nature_tags = {}, {}
   for _, tag in ipairs(dt.tags.get_tags(image)) do
     if starts_with(tag.name, prefix) then
       artemis_tags[#artemis_tags + 1] = tag
     elseif starts_with(tag.name, reviewed_prefix) then
-      has_nature = true
+      nature_tags[#nature_tags + 1] = tag
     end
   end
-  return artemis_tags, has_nature
+  return artemis_tags, nature_tags
 end
 
 -- --- widgets ------------------------------------------------------------
@@ -78,14 +81,34 @@ local tags_view = dt.new_widget("text_view") {
   editable = false,
 }
 
-local accept_button, reject_button -- forward, callbacks need update_panel
+-- fill the tag view, hiding the box entirely when there is nothing to show
+local function set_tags_view(text)
+  tags_view.text = text
+  tags_view.visible = text ~= ""
+end
+
+local accept_button, reject_button, identify_button -- forward, callbacks
+                                                     -- need update_panel
 
 -- the image's Artemis| tags if it is up for review (has them, and no
 -- Nature| tags yet), nil otherwise
 local function reviewable(image)
-  local artemis_tags, has_nature = review_state(image)
-  if #artemis_tags == 0 or has_nature then return nil end
+  local artemis_tags, nature_tags = review_state(image)
+  if #artemis_tags == 0 or #nature_tags > 0 then return nil end
   return artemis_tags
+end
+
+-- true when the image carries neither Artemis| nor Nature| tags, so
+-- identification would not overwrite or re-scan anything
+local function identifiable(image)
+  local artemis_tags, nature_tags = review_state(image)
+  return #artemis_tags == 0 and #nature_tags == 0
+end
+
+-- artemis.lua exposes its entry point in _G.artemis; looked up at click /
+-- panel-update time so load order and script-manager state do not matter
+local function artemis_loaded()
+  return _G.artemis ~= nil and _G.artemis.identify ~= nil
 end
 
 -- the single selected image, or nil
@@ -95,56 +118,74 @@ local function selected_image()
   return nil
 end
 
+-- root-stripped tag names, one per line, for the tag view
+local function tag_lines(tags, root)
+  local prefix = root .. "|"
+  local lines = {}
+  for _, tag in ipairs(tags) do
+    lines[#lines + 1] = tag.name:sub(#prefix + 1):gsub("|", " › ")
+  end
+  return table.concat(lines, "\n")
+end
+
 local function update_panel()
   local selection = dt.gui.selection()
 
   if #selection == 0 then
     status_label.label = "select an image"
-    tags_view.text = ""
+    set_tags_view("")
     accept_button.sensitive = false
     reject_button.sensitive = false
+    identify_button.sensitive = false
     return
   end
 
-  -- several images: batch accept only; each image is reviewed against its
-  -- own tags, so there is nothing meaningful to show in the tag view
+  -- several images: batch accept / identify only; each image is reviewed
+  -- against its own tags, so there is nothing meaningful to show in the
+  -- tag view
   if #selection > 1 then
-    local pending = 0
+    local pending, fresh = 0, 0
     for _, image in ipairs(selection) do
       if reviewable(image) then pending = pending + 1 end
+      if identifiable(image) then fresh = fresh + 1 end
     end
     status_label.label = string.format(
-      "%d images selected, %d to review", #selection, pending)
-    tags_view.text = ""
+      "%d images selected, %d to review, %d to identify",
+      #selection, pending, fresh)
+    set_tags_view("")
     accept_button.sensitive = pending > 0
     reject_button.sensitive = false
+    identify_button.sensitive = fresh > 0 and artemis_loaded()
     return
   end
 
   local image = selection[1]
-  local artemis_tags, has_nature = review_state(image)
+  local artemis_tags, nature_tags = review_state(image)
   local root = artemis_prefix()
-  local prefix = root .. "|"
 
-  -- show each identification with the root stripped, one per line
-  local lines = {}
-  for _, tag in ipairs(artemis_tags) do
-    lines[#lines + 1] = tag.name:sub(#prefix + 1):gsub("|", " › ")
+  -- already reviewed: show what was accepted
+  if #nature_tags > 0 then
+    set_tags_view(tag_lines(nature_tags, nature_prefix()))
+    status_label.label = string.format(
+      "already reviewed, %d accepted tag(s)", #nature_tags)
+    accept_button.sensitive = false
+    reject_button.sensitive = false
+    identify_button.sensitive = false
+    return
   end
-  tags_view.text = table.concat(lines, "\n")
+
+  set_tags_view(tag_lines(artemis_tags, root))
 
   if #artemis_tags == 0 then
     status_label.label = "no " .. root .. " tags on this image"
     accept_button.sensitive = false
     reject_button.sensitive = false
-  elseif has_nature then
-    status_label.label = "already reviewed (" .. nature_prefix() .. " tags present)"
-    accept_button.sensitive = false
-    reject_button.sensitive = false
+    identify_button.sensitive = artemis_loaded()
   else
     status_label.label = string.format("%d identification(s) found", #artemis_tags)
     accept_button.sensitive = true
     reject_button.sensitive = true
+    identify_button.sensitive = false
   end
 end
 
@@ -201,12 +242,34 @@ reject_button = dt.new_widget("button") {
   clicked_callback = reject,
 }
 
+-- start artemis on the selection; only enabled for images that carry
+-- neither Artemis| nor Nature| tags (artemis filters again on its own,
+-- so a stale panel state cannot cause a re-scan)
+local function identify()
+  if not artemis_loaded() then
+    dt.print("nature: enable artemis.lua to identify images")
+    return
+  end
+  _G.artemis.identify(dt.gui.selection())
+  update_panel()
+end
+
+identify_button = dt.new_widget("button") {
+  label = "identify",
+  tooltip = "run artemis species identification on the selected image(s); "
+    .. "available when no " .. artemis_prefix() .. " or " .. nature_prefix()
+    .. " tags are present (requires the artemis script)",
+  sensitive = false,
+  clicked_callback = identify,
+}
+
 local main_widget = dt.new_widget("box") {
   orientation = "vertical",
   status_label,
   tags_view,
   dt.new_widget("box") {
     orientation = "horizontal",
+    identify_button,
     accept_button,
     reject_button,
   },

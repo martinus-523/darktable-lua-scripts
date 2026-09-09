@@ -452,4 +452,8 @@ dt.register_event(
   "artemis: identify species in selected images"
 )
 
+-- entry point for other scripts (the nature panel's identify button);
+-- looked up there at click time, so load order does not matter
+_G.artemis = { identify = tag_images }
+
 dt.print_log("artemis.lua loaded.")

@@ -34,5 +34,8 @@ Nature is a review companion for Artemis: a lighttable panel that shows the
 `Artemis` tags of the selected image and lets you **accept** them (each tag
 is copied under `Nature` instead of `Artemis`) or **reject** them (the
 `Artemis` tags are removed). The buttons are disabled when the image has no
-`Artemis` tags, or already carries `Nature` tags from an earlier review.
+`Artemis` tags, or already carries `Nature` tags from an earlier review —
+reviewed images show their accepted `Nature` tags instead. An **identify**
+button starts Artemis right from the panel for images that carry neither
+`Artemis` nor `Nature` tags yet.
 Artemis can be configured to ignore images already tagged with `Nature`.
