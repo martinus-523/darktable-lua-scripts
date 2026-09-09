@@ -1,12 +1,13 @@
 # artemis
 
 Automatic animal and bird species identification for darktable — no server,
-everything local. [BioCLIP 2.5 Huge](https://huggingface.co/imageomics/bioclip-2.5-vith14)
+no Python, everything local. [BioCLIP 2.5 Huge](https://huggingface.co/imageomics/bioclip-2.5-vith14)
 (a ViT-H/14 model trained on the 200-million-image
 [TreeOfLife-200M](https://huggingface.co/datasets/imageomics/TreeOfLife-200M)
-dataset) scores every image against the ~800,000 taxa of the Tree of Life
-and attaches the predicted taxonomy as hierarchical tags — by default one
-scientific and one English tag per identification:
+dataset) runs inside darktable through the `darktable.ai` Lua API
+(darktable ≥ 5.6), scores every image against the ~800,000 taxa of the Tree
+of Life, and attaches the predicted taxonomy as hierarchical tags — by
+default one scientific and one English tag per identification:
 
 ```
 Artemis|Scientific|Aves|Passeriformes|Paridae|Parus major
@@ -39,35 +40,59 @@ and an image whose probability mass never concentrates on any animal class
 softmax over the *entire* Tree of Life, so they mean "how much of the
 probability mass lands on this lineage" regardless of the configured scope.
 
+## How it works
+
+The build tool splits BioCLIP into two ONNX models packaged as one
+`.dtmodel`: **tower.onnx** turns a 224×224 crop into an image embedding,
+and **scorer.onnx** holds the float16 text embeddings of all ~800k taxa
+plus the taxonomy aggregation — softmax over the whole Tree of Life and,
+per walked rank, the probability mass of every taxonomic group (taxa are
+sorted at build time so each group is a contiguous row range, which makes
+the aggregation a cumulative sum inside the graph). The scorer returns the
+top-64 groups per rank; `artemis.lua` walks those, resolves names through
+`data/taxa.bin` (a fixed-width record file written by the build in the
+same row order), and attaches the tags. darktable's bundled ONNX Runtime
+does the inference, on GPU where available (CoreML, CUDA, …).
+
+Python is involved only at *build* time, never at tagging time.
+
 ## Setup
 
-The only requirement is [uv](https://docs.astral.sh/uv/):
+1. **Build the model** once with [uv](https://docs.astral.sh/uv/):
 
-```sh
-brew install uv        # macOS
-# or: curl -LsSf https://astral.sh/uv/install.sh | sh
-```
+   ```sh
+   cd artemis/tools
+   uv run build_model.py
+   ```
 
-`tagger.py` carries its own dependency metadata — uv creates the Python
-environment (PyTorch, OpenCLIP, …) automatically on first run.
+   The first run downloads ~10 GB from Hugging Face (the BioCLIP weights
+   and the precomputed taxa embeddings), all cached under
+   `~/.cache/huggingface/`. It writes
+   `artemis/build/artemis-bioclip.dtmodel` (~2.9 GB) and
+   `artemis/data/taxa.bin` (~200 MB, must stay next to `artemis.lua`),
+   and validates the export against PyTorch. Add `--test-image photo.jpg`
+   for an end-to-end identification check.
 
-**The first run downloads ~7 GB**: the BioCLIP 2.5 Huge weights (~3.9 GB)
-and the precomputed text embeddings for all TreeOfLife-200M taxa (~3.3 GB),
-both cached by Hugging Face under `~/.cache/huggingface/`. A float16 copy of
-the embeddings and a taxonomy index (~1.7 GB) are additionally cached under
-`~/.cache/artemis/`, so runs after the first load fast.
+2. **Install the model** in darktable: *preferences → AI → install model
+   from file*, pick the `.dtmodel`. (Or unzip it into darktable's models
+   directory, e.g. `~/.local/share/darktable/models/`.)
 
-Then enable `artemis/artemis.lua` in darktable's script manager.
+3. **Enable** `artemis/artemis.lua` in darktable's script manager.
+
+darktable must be ≥ 5.6 with AI support enabled. `taxa.bin` and the
+model package are built together and must stay in sync — rebuild and
+reinstall both whenever you regenerate one.
 
 ## Use
 
 Select images in the lighttable and press the **artemis: identify species**
 button in the *selected image[s]* panel (or assign the shortcut of the same
-name). Images are processed in batches on the GPU if one is available (CUDA
-or Apple Silicon), otherwise on the CPU. ViT-H/14 is a big model — expect
-roughly a second per image on an Apple Silicon GPU, more on CPU. A progress
-bar in darktable's lower-left corner tracks the run; it stays at 0% while
-the model loads, which dominates the very first run.
+name). The model sees a center crop of the *developed* image — darktable's
+full edit pipeline output. ViT-H/14 is a big model: the first inference
+after a darktable start is slow (the execution provider compiles the
+graph), after that expect around a second per image on Apple Silicon, more
+on CPU. A progress bar in darktable's lower-left corner tracks the run and
+can cancel it.
 
 Preferences (*preferences → lua options*):
 
@@ -91,33 +116,11 @@ review panel (see the nature module).
 Species-level accuracy is genuinely good for birds, mammals, butterflies and
 other well-photographed groups, but among 800k taxa confusable sibling
 species exist everywhere — treat a species tag as a strong suggestion, and
-the genus/family levels above it as near-certain. Raw files are identified
-from their embedded JPEG preview, so no full raw decode is needed.
+the genus/family levels above it as near-certain.
 
-## Standalone use
-
-The tagger is a plain CLI and works without darktable:
-
-```sh
-uv run tagger.py --in paths.txt --out tags.json \
-    [--threshold 0.3 --topk 1 --scope animals --tag-style separate --batch 8
-     --progress progress.txt]
-```
-
-`paths.txt` holds one image path per line; unreadable files are skipped with
-a warning. Output:
-
-```json
-{ "/photos/IMG_1234.NEF": [
-    ["Scientific|Aves|Passeriformes|Paridae|Parus major", 0.87],
-    ["English|Birds|Perching Birds|Tits and Chickadees|Great Tit", 0.87]
-  ],
-  "/photos/IMG_1235.NEF": [
-    ["Scientific|Aves|Charadriiformes|Laridae", 0.62],
-    ["English|Birds|Shorebirds|Gulls, Terns and Skimmers", 0.62]
-  ],
-  "/photos/IMG_1236.NEF": [] }
-```
+The scorer's top-64-per-rank shortcut is exact for any threshold above
+1/64 ≈ 0.016 (probabilities sum to 1, so no group outside the top 64 of its
+rank can clear such a threshold) — every practical setting qualifies.
 
 To regenerate `data/rank-names.tsv` (e.g. after a GBIF backbone update):
 

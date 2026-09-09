@@ -1,1 +1,4 @@
 **/__pycache__
+argus/build/
+artemis/build/
+artemis/data/taxa.bin

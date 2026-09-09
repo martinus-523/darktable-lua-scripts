@@ -1,15 +1,16 @@
 # argus
 
 Automatic image tagging for darktable with standardised subject and scene
-keywords — no server, everything local. A SigLIP model (via OpenCLIP) scores
-every image against the labels in `data/vocabulary.tsv`:
+keywords — no server, no Python, everything local. A SigLIP model runs
+inside darktable through the `darktable.ai` Lua API (darktable ≥ 5.6) and
+scores every image against the labels in `data/vocabulary.tsv`:
 
 - **scene** group — the 365 categories of
   [Places365](http://places2.csail.mit.edu)
 - **object** group — the 601 boxable classes of
   [OpenImages V7](https://storage.googleapis.com/openimages/web/index.html)
 - **extra** group — terms the two datasets lack (Sunset, Sunrise, Forest,
-  Fog, …), meant to be extended by you
+  Fog, …)
 
 Every label is filed into a photographer-oriented hierarchy under `Argus|`:
 
@@ -27,53 +28,56 @@ Food & Drink, Objects (with subgroups such as Vehicles, Furniture,
 Electronics, Clothing & Accessories, Sports, Music, Tools), Weather, Light,
 Season.
 
-`vocabulary.tsv` is the single place to adjust all of this. One row per
-label, three tab-separated columns:
-
-```
-Lake natural	scene	Landscape|Lake
-Dog	object	Animals|Dog
-Sunset	extra	Light|Sunset
-```
-
-The first column is the text the model scores (it goes into the prompt
-"a photo of a …"), the second the group whose top-k cap applies, the third
-where the tag lands (rooted at the configurable tag prefix (default `Argus|`)). So you can re-home a label by editing
-its path, rename a tag without changing what is scored, remove a label by
-deleting its row, and add your own terms as new `extra` rows. Changed labels
-are re-encoded and re-cached automatically on the next run; a row without a
-path falls back to a coarse per-group branch.
-
 Scoring is multi-label: each label gets an independent sigmoid score, so an
 image can be `beach` *and* `sunset`. Labels above a configurable threshold
-are kept, capped per group (defaults: 3 scenes, 8 objects). Everything runs
-locally; raw files are tagged from their embedded JPEG preview, so no full
-raw decode is needed.
+are kept, capped per group (defaults: 3 scenes, 8 objects). The model sees
+the *developed* image — darktable's full edit pipeline output — not the
+camera preview.
+
+## How it works
+
+The whole scoring pipeline is baked into a single ONNX model
+(`argus-siglip`): SigLIP's squash-resize and normalization, the
+ViT-B-16-SigLIP image tower, the precomputed text embeddings of all ~1000
+vocabulary prompts, and the final sigmoid. `argus.lua` feeds it one image
+tensor and reads back one score per label — darktable's bundled ONNX
+Runtime does the inference, on GPU where available (CoreML, CUDA, …).
+
+The text tower runs only at *build* time: `tools/build_model.py` encodes
+the vocabulary prompts and packages everything as a `.dtmodel`. That is
+the one place Python is still involved — as a build tool, never at
+tagging time.
 
 ## Setup
 
-The only requirement is [uv](https://docs.astral.sh/uv/):
+1. **Get the model.** Build it once with [uv](https://docs.astral.sh/uv/)
+   (downloads the SigLIP weights, ~800 MB, from Hugging Face):
 
-```sh
-brew install uv        # macOS
-# or: curl -LsSf https://astral.sh/uv/install.sh | sh
-```
+   ```sh
+   cd argus/tools
+   uv run build_model.py
+   ```
 
-`tagger.py` carries its own dependency metadata — uv creates the Python
-environment (PyTorch, OpenCLIP, …) automatically on first run, and the model
-weights (~800 MB, ViT-B-16-SigLIP) are downloaded once from Hugging Face.
-The prompt text embeddings are cached under `~/.cache/argus/`.
+   This writes `argus/build/argus-siglip.dtmodel` (~350 MB) and validates
+   the export against PyTorch. Add `--test-image photo.jpg` to see the
+   top-10 labels for a photo of your own.
 
-Then enable `argus/argus.lua` in darktable's script manager.
+2. **Install it** in darktable: *preferences → AI → install model from
+   file*, pick the `.dtmodel`. (Or unzip it into darktable's models
+   directory, e.g. `~/.local/share/darktable/models/`.)
+
+3. **Enable** `argus/argus.lua` in darktable's script manager.
+
+darktable must be ≥ 5.6 with AI support enabled.
 
 ## Use
 
-Select images in the lighttable and press the **auto tag (SigLIP)** button in
-the *selected image[s]* panel (or assign the shortcut of the same name). The
-first run is slow (environment + model download); after that, images are
-tagged in batches on the GPU if one is available (CUDA or Apple Silicon),
-otherwise on the CPU. A progress bar in darktable's lower-left corner tracks
-the run; it stays at 0% while the model loads, which dominates the first run.
+Select images in the lighttable and press the **argus: auto tag** button in
+the *selected image[s]* panel (or assign the shortcut of the same name).
+The first inference after a darktable start is slower (the execution
+provider compiles the model graph); after that, expect a fraction of a
+second per image. A progress bar in darktable's lower-left corner tracks
+the run and can cancel it.
 
 Preferences (*preferences → lua options*):
 
@@ -97,22 +101,19 @@ correct labels typically land anywhere between 0.001 and 0.3. Raise the
 threshold (e.g. 0.01) for fewer, higher-precision tags; the top-k caps do
 the rest of the pruning.
 
-## Standalone use
+## Changing the vocabulary
 
-The tagger is a plain CLI and works without darktable:
+`data/vocabulary.tsv` is still the single source of truth — one row per
+label, three tab-separated columns (label, group, tag path):
 
-```sh
-uv run tagger.py --in paths.txt --out tags.json \
-    [--threshold 0.001 --topk-scene 3 --topk-object 8 --topk-extra 3 --batch 16
-     --progress progress.txt]
+```
+Lake natural	scene	Landscape|Lake
+Dog	object	Animals|Dog
+Sunset	extra	Light|Sunset
 ```
 
-`paths.txt` holds one image path per line; unreadable files are skipped with
-a warning. Output:
-
-```json
-{ "/photos/IMG_1234.NEF": {
-    "scene":  [["Landscape|Beach", 0.83], ["Landscape|Coast", 0.41]],
-    "object": [["Animals|Dog", 0.91], ["Objects|Sports|Ball", 0.33]],
-    "extra":  [["Light|Sunset", 0.44]] } }
-```
+But because the text embeddings are baked into the model, **the model must
+be rebuilt after any edit**: run `uv run build_model.py` again and
+reinstall the `.dtmodel`. `argus.lua` reads the same file in the same
+order to map score indices back to tag paths, and refuses to run when the
+label count no longer matches the installed model.

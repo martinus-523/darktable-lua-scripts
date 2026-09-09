@@ -1,26 +1,23 @@
 -- artemis.lua — animal & bird species identification with BioCLIP 2.5
 --
--- Runs tagger.py (via uv) on the selected images and attaches the predicted
--- taxonomy as hierarchical tags under Artemis| — by default one scientific
--- and one English tag per identification, e.g.
--- Artemis|Scientific|Aves|Passeriformes|Paridae|Parus major and
--- Artemis|English|Birds|Perching Birds|Tits and Chickadees|Great Tit. The tagger
--- only descends the taxonomy as far as it is confident, so an unclear photo
--- may end at order or family level. Images already accepted in the nature
--- review panel (any tag under nature's prefix, Nature| by default) are never
--- scanned. Everything runs
--- locally; see readme.md for the one-time uv setup (the first run downloads
--- ~7 GB of model data).
-
-local this_module = ...
-local folder = this_module and this_module:match("^(.*[/\\])") or ""
+-- Identifies the species in the selected images with the artemis-bioclip
+-- model (built by tools/build_model.py, installed through darktable's AI
+-- preferences) and attaches the predicted taxonomy as hierarchical tags
+-- under Artemis| — by default one scientific and one English tag per
+-- identification, e.g. Artemis|Scientific|Aves|Passeriformes|Paridae|Parus
+-- major and Artemis|English|Birds|Perching Birds|Tits and Chickadees|Great
+-- Tit. The walk only descends the taxonomy as far as it is confident, so an
+-- unclear photo may end at order or family level. Images already accepted in
+-- the nature review panel (any tag under nature's prefix, Nature| by
+-- default) are never scanned. Inference runs inside darktable through the
+-- darktable.ai Lua API (darktable >= 5.6) — no Python, no external
+-- processes.
 
 local dt = require "darktable"
-local json = require(folder .. "lib/json")
 
--- `folder` is the module prefix for require(); to invoke tagger.py we need
--- this file's directory as an absolute filesystem path instead (the module
--- name is relative to darktable's lua/ directory).
+-- data/taxa.bin and data/rank-names.tsv live next to this file; the module
+-- name is relative to darktable's lua/ directory, so turn it into an
+-- absolute filesystem path
 local source = debug.getinfo(1, "S").source:gsub("^@", "")
 local script_dir = source:match("^(.*[/\\])") or ""
 if script_dir:sub(1, 1) ~= "/" and not script_dir:match("^%a:[/\\]") then
@@ -29,6 +26,18 @@ end
 
 local MODULE = "artemis"
 local DEFAULT_PREFIX = "Artemis"
+local MODEL_ID = "artemis-bioclip"
+
+-- tower.onnx takes a fixed 224x224 crop; the build tool asserts the model's
+-- preprocess matches (CLIP: shortest side to 224, then center crop)
+local CROP = 224
+
+-- fixed-width record size of data/taxa.bin (kept in sync with
+-- tools/build_model.py); one record per TreeOfLife row, sorted by lineage
+local RECORD_SIZE = 256
+
+-- taxonomy indices kingdom..species = 0..6; the walk covers class..species
+local WALK_RANKS = { 2, 3, 4, 5, 6 }
 
 -- --- preferences ------------------------------------------------------------
 
@@ -64,7 +73,7 @@ dt.preferences.register(
 dt.preferences.register(
   MODULE, "threshold", "float",
   "artemis: confidence threshold",
-  "Minimum probability (0-1) for a taxonomic rank to be tagged; the tagger "
+  "Minimum probability (0-1) for a taxonomic rank to be tagged; the walk "
   .. "descends class, order, family, genus, species and stops at the "
   .. "deepest rank still above this value. Below it at class level already, "
   .. "the image gets no tag (probably no animal in it)",
@@ -86,39 +95,7 @@ dt.preferences.register(
   true
 )
 
--- --- helpers ----------------------------------------------------------------
-
-local function quote(arg)
-  return '"' .. tostring(arg):gsub('"', '\\"') .. '"'
-end
-
--- number-to-string that ignores the locale (a Dutch locale would otherwise
--- render 0.3 as "0,3" and break the tagger's argument parsing) and trims
--- float32 noise from preference values
-local function fmt_num(x)
-  return (string.format("%.6g", x):gsub(",", "."))
-end
-
--- darktable launched from the GUI often has a minimal PATH, so look for uv
--- in the usual install locations before falling back to the bare name.
-local function find_uv()
-  local home = os.getenv("HOME") or ""
-  local candidates = {
-    home .. "/.local/bin/uv",
-    "/opt/homebrew/bin/uv",
-    "/usr/local/bin/uv",
-    "/usr/bin/uv",
-  }
-  for _, path in ipairs(candidates) do
-    local f = io.open(path, "r")
-    if f then f:close() return path end
-  end
-  return "uv"
-end
-
-local function tagger_path()
-  return script_dir .. "tagger.py"
-end
+-- --- tag helpers ------------------------------------------------------------
 
 -- the configured tag root including the trailing "|", e.g. "Artemis|"
 local function tag_prefix()
@@ -157,127 +134,308 @@ local function has_nature_tag(image)
   return false
 end
 
-local function read_file(path)
-  local f = io.open(path, "r")
-  if not f then return nil end
-  local content = f:read("*a")
+-- --- taxonomy data ----------------------------------------------------------
+
+-- data/rank-names.tsv -> { "<rank>|<scientific>" = English }, for the
+-- english and separate tag styles; a missing file just means the English
+-- tag tree keeps the scientific rank names
+local function load_rank_names()
+  local names = {}
+  local rank_idx = { kingdom = 0, class = 2, order = 3, family = 4 }
+  local f = io.open(script_dir .. "data/rank-names.tsv", "r")
+  if not f then
+    dt.print_log("artemis: no rank-names.tsv; English tags keep "
+                 .. "scientific ranks")
+    return names
+  end
+  for line in f:lines() do
+    local trimmed = line:gsub("\r$", ""):match("^%s*(.-)%s*$")
+    if trimmed ~= "" and trimmed:sub(1, 1) ~= "#" then
+      local sci, rank, eng = trimmed:match("^(.-)\t(.-)\t(.*)$")
+      sci = sci and sci:match("^%s*(.-)%s*$")
+      eng = eng and eng:match("^%s*(.-)%s*$")
+      rank = rank and rank_idx[rank:match("^%s*(.-)%s*$")]
+      if sci and sci ~= "" and rank and eng and eng ~= "" then
+        names[rank .. "|" .. sci] = eng
+      end
+    end
+  end
   f:close()
-  return content
+  return names
+end
+
+-- open data/taxa.bin and return a row -> record lookup (cached per run).
+-- each record is the 8 pipe-separated fields kingdom..species, common name
+local function open_taxa()
+  local path = script_dir .. "data/taxa.bin"
+  local f = io.open(path, "rb")
+  if not f then
+    return nil, "cannot read " .. path .. " — run tools/build_model.py"
+  end
+  local cache = {}
+  local function record(row)
+    local rec = cache[row]
+    if rec then return rec end
+    f:seek("set", row * RECORD_SIZE)
+    local raw = f:read(RECORD_SIZE)
+    if not raw then error("taxa.bin row " .. row .. " out of range — "
+                          .. "rebuild model and taxa.bin together") end
+    rec = {}
+    for field in (raw:match("^[^\0]*") .. "|"):gmatch("(.-)|") do
+      rec[#rec + 1] = field
+    end
+    for i = #rec + 1, 8 do rec[i] = "" end
+    cache[row] = rec
+    return rec
+  end
+  return record, nil, f
+end
+
+-- --- tag construction (ports tagger.py's lineage/make_tags) -------------------
+
+-- hierarchical tag for a lineage down to WALK_RANKS[depth+1]; the species
+-- component is replaced by `leaf`, all other ranks go through `translate`.
+-- kingdom is prepended for non-animals so plants and fungi stay
+-- recognizable; empty ranks are skipped, and so is the genus level when
+-- the species leaf follows it anyway
+local function lineage(rec, depth, leaf, translate)
+  local parts = {}
+  local species_depth = #WALK_RANKS - 1
+  if rec[1] ~= "Animalia" then
+    local p = translate(0, rec[1])
+    if p and p ~= "" then parts[#parts + 1] = p end
+  end
+  for d = 0, depth do
+    local rank = WALK_RANKS[d + 1]
+    if not (rank == 5 and depth == species_depth) then
+      local part
+      if rank == 6 then part = leaf
+      else part = translate(rank, rec[rank + 1]) end
+      if part and part ~= "" then parts[#parts + 1] = part end
+    end
+  end
+  return table.concat(parts, "|")
+end
+
+-- the tag path(s) for one identification, following the configured style:
+-- 'separate' (default) emits a scientific and an English tree tag,
+-- 'scientific' / 'english' just one of them, 'combined' a scientific tree
+-- whose species leaf carries the common name in parentheses
+local function make_tags(rec, depth, style, rank_names)
+  local species = depth == #WALK_RANKS - 1
+  local binomial = (rec[6] .. " " .. rec[7]):match("^%s*(.-)%s*$")
+  local common = rec[8]:match("^%s*(.-)%s*$")
+  if common ~= "" then
+    common = common:sub(1, 1):upper() .. common:sub(2)
+  end
+
+  local ident = function(_, name) return name end
+  local trans = function(rank, name)
+    return rank_names[rank .. "|" .. name] or name
+  end
+
+  local paths = {}
+  if style == "separate" or style == "scientific" then
+    paths[#paths + 1] = "Scientific|"
+      .. lineage(rec, depth, species and binomial or nil, ident)
+  end
+  if style == "combined" then
+    local leaf
+    if species then
+      leaf = common ~= "" and (binomial .. " (" .. common .. ")") or binomial
+    end
+    paths[#paths + 1] = lineage(rec, depth, leaf, ident)
+  end
+  if style == "separate" or style == "english" then
+    local leaf
+    if species then leaf = common ~= "" and common or binomial end
+    paths[#paths + 1] = "English|" .. lineage(rec, depth, leaf, trans)
+  end
+  return paths
+end
+
+-- --- hierarchy walk ----------------------------------------------------------
+
+local function in_scope(rec, scope)
+  if scope == "birds" then return rec[3] == "Aves" end
+  if scope == "animals" then return rec[1] == "Animalia" end
+  return true
+end
+
+-- Walk class -> species over the scorer's per-rank top-64 group sums and
+-- return the tag paths. At each rank the candidates are sorted by
+-- probability mass, so the first one that is in scope and nested inside the
+-- previous rank's winner is the argmax; the walk stops when it falls below
+-- the threshold, and the deepest passing rank becomes the tag. Species-level
+-- hits add runner-up species that also clear the threshold (feeder shots
+-- with several birds), up to the topk preference.
+local function identify(out, record, opts)
+  local best
+  for d = 0, #WALK_RANKS - 1 do
+    local sums = out[3 * d + 1]
+    local starts = out[3 * d + 2]
+    local ends = out[3 * d + 3]
+    local pick
+    for i = 0, sums:shape()[2] - 1 do
+      local a = math.floor(starts:get({0, i}) + 0.5)
+      local b = math.floor(ends:get({0, i}) + 0.5)
+      if (not best or (a >= best.start_row and b <= best.end_row))
+          and in_scope(record(a), opts.scope) then
+        pick = { depth = d, sum = sums:get({0, i}),
+                 start_row = a, end_row = b }
+        break
+      end
+    end
+    if not pick or pick.sum < opts.threshold then break end
+    best = pick
+  end
+  if not best then return {} end
+
+  local paths = make_tags(record(best.start_row), best.depth,
+                          opts.tag_style, opts.rank_names)
+  if best.depth == #WALK_RANKS - 1 then
+    local sums = out[13]
+    local starts = out[14]
+    local found = 1
+    for i = 0, sums:shape()[2] - 1 do
+      if found >= opts.topk then break end
+      local s = sums:get({0, i})
+      if s < opts.threshold then break end
+      local a = math.floor(starts:get({0, i}) + 0.5)
+      if a ~= best.start_row and in_scope(record(a), opts.scope) then
+        local extra = make_tags(record(a), best.depth,
+                                opts.tag_style, opts.rank_names)
+        for _, p in ipairs(extra) do paths[#paths + 1] = p end
+        found = found + 1
+      end
+    end
+  end
+  return paths
 end
 
 -- --- main action ------------------------------------------------------------
+
+-- Identify one image: load a CLIP center crop through the develop pipeline,
+-- run the two models, walk the taxonomy. Returns the tag paths.
+local function identify_one(tower, scorer, image, record, opts)
+  -- aspect-preserving load with the SHORT side at 224 (max 0 = that axis
+  -- unconstrained), then a center crop — exactly CLIP's preprocessing,
+  -- with darktable's high-quality resampler doing the downscale
+  local w, h = image.final_width, image.final_height
+  if not w or w == 0 then w, h = image.width, image.height end
+  local input
+  if w >= h then
+    input = dt.ai.load_image(image, 0, CROP)
+  else
+    input = dt.ai.load_image(image, CROP, 0)
+  end
+  -- the pipeline output is scene-linear; BioCLIP saw gamma-encoded images
+  input:linear_to_srgb()
+
+  local ih, iw = input:shape()[3], input:shape()[4]
+  if ih < CROP or iw < CROP then
+    error(string.format("image too small after export (%dx%d)", iw, ih))
+  end
+  local crop = input:crop(
+    math.floor((ih - CROP) / 2), math.floor((iw - CROP) / 2), CROP, CROP)
+
+  local emb = tower:run(crop)
+  local out = { scorer:run(emb) }
+  return identify(out, record, opts)
+end
 
 local function tag_images(images)
   if #images == 0 then
     dt.print("artemis: no images selected")
     return
   end
+  if not dt.ai then
+    dt.print("artemis: this darktable has no AI support (needs darktable ≥ 5.6)")
+    return
+  end
 
-  -- keep only images the run should touch, remembering each by its full path
-  local by_path = {}
+  -- keep only images the run should touch
   local prefix = tag_prefix()
   local skip_tagged = dt.preferences.read(MODULE, "skip_tagged", "bool")
-  local paths = {}
+  local work = {}
   for _, image in ipairs(images) do
     if not has_nature_tag(image)
         and not (skip_tagged and has_artemis_tag(image, prefix)) then
-      local path = image.path .. "/" .. image.filename
-      paths[#paths + 1] = path
-      by_path[path] = image
+      work[#work + 1] = image
     end
   end
-  if #paths == 0 then
+  if #work == 0 then
     dt.print("artemis: all selected images are already tagged or accepted")
     return
   end
 
-  local tmp = dt.configuration.tmp_dir
-  local paths_file = tmp .. "/artemis-paths.txt"
-  local json_file = tmp .. "/artemis-tags.json"
-  local log_file = tmp .. "/artemis.log"
-  local progress_file = tmp .. "/artemis-progress.txt"
-
-  local f = io.open(paths_file, "w")
-  if not f then
-    dt.print("artemis: cannot write " .. paths_file)
+  local record, err, taxa_file = open_taxa()
+  if not record then
+    dt.print("artemis: " .. err)
     return
   end
-  f:write(table.concat(paths, "\n"), "\n")
-  f:close()
-  os.remove(json_file)
-  os.remove(progress_file)
 
-  local command = table.concat({
-    quote(find_uv()), "run", quote(tagger_path()),
-    "--in", quote(paths_file),
-    "--out", quote(json_file),
-    "--threshold", fmt_num(dt.preferences.read(MODULE, "threshold", "float")),
-    "--topk", fmt_num(dt.preferences.read(MODULE, "topk", "integer")),
-    "--scope", dt.preferences.read(MODULE, "scope", "enum"),
-    "--tag-style", dt.preferences.read(MODULE, "tag_style", "enum"),
-    "--progress", quote(progress_file),
-  }, " ") .. " 2> " .. quote(log_file)
+  local ok_t, tower = pcall(dt.ai.load_model, MODEL_ID, nil, "tower.onnx")
+  local ok_s, scorer
+  if ok_t and tower then
+    ok_s, scorer = pcall(dt.ai.load_model, MODEL_ID, nil, "scorer.onnx")
+  end
+  if not (ok_t and tower and ok_s and scorer) then
+    dt.print("artemis: cannot load model '" .. MODEL_ID .. "' — build it "
+             .. "with tools/build_model.py and install the .dtmodel in "
+             .. "preferences → AI (see readme)")
+    dt.print_log("artemis: load_model: "
+                 .. tostring(ok_t and (ok_s and scorer or scorer) or tower))
+    if ok_t and tower then tower:close() end
+    taxa_file:close()
+    return
+  end
+
+  local opts = {
+    threshold = dt.preferences.read(MODULE, "threshold", "float"),
+    topk = dt.preferences.read(MODULE, "topk", "integer"),
+    scope = dt.preferences.read(MODULE, "scope", "enum"),
+    tag_style = dt.preferences.read(MODULE, "tag_style", "enum"),
+    rank_names = load_rank_names(),
+  }
 
   dt.print(string.format("artemis: identifying species in %d image(s)…",
-                         #paths))
-  dt.print_log("artemis: " .. command)
-
-  -- dt.control.execute yields this coroutine while the tagger runs, so a
-  -- dispatched sibling can poll the progress file the tagger overwrites
-  -- after every batch and move a progress bar (bottom left). The bar sits
-  -- at 0% while the model loads, which dominates the very first run.
+                         #work))
   local job = dt.gui.create_job(
-    string.format("artemis: identifying species in %d image(s)", #paths), true)
-  local finished = false
-  dt.control.dispatch(function()
-    while not finished do
-      dt.control.sleep(500)
-      if finished then break end
-      local done, total = (read_file(progress_file) or ""):match("^(%d+)%s+(%d+)")
-      if total and tonumber(total) > 0 then
-        job.percent = tonumber(done) / tonumber(total)
-      end
-    end
-  end)
+    string.format("artemis: identifying species in %d image(s)", #work),
+    true, function(j) j.valid = false end)
 
-  local rc = dt.control.execute(command)
-  finished = true
+  local tagged, attached, failed = 0, 0, 0
+  for i, image in ipairs(work) do
+    if not job.valid then break end
+    local ran, result = pcall(identify_one, tower, scorer, image,
+                              record, opts)
+    if ran then
+      for _, path in ipairs(result) do
+        dt.tags.attach(dt.tags.create(prefix .. path), image)
+        attached = attached + 1
+      end
+      if #result > 0 then tagged = tagged + 1 end
+    else
+      failed = failed + 1
+      dt.print_log(string.format("artemis: %s failed: %s",
+                                 image.filename, tostring(result)))
+    end
+    if job.valid then job.percent = i / #work end
+  end
+
+  tower:close()
+  scorer:close()
+  taxa_file:close()
   job.valid = false
 
-  if rc ~= 0 then
-    dt.print("artemis: tagger failed (exit " .. rc .. "), see " .. log_file)
-    return
-  end
-
-  local content = read_file(json_file)
-  if not content then
-    dt.print("artemis: tagger produced no output, see " .. log_file)
-    return
-  end
-  local ok, results = pcall(json.decode, content)
-  if not ok or type(results) ~= "table" then
-    dt.print("artemis: cannot parse tagger output: " .. tostring(results))
-    return
-  end
-
-  local tagged, attached = 0, 0
-  for path, entries in pairs(results) do
-    local image = by_path[path]
-    if image then
-      local any = false
-      for _, entry in ipairs(entries) do
-        local tag = dt.tags.create(prefix .. entry[1])
-        dt.tags.attach(tag, image)
-        attached = attached + 1
-        any = true
-      end
-      if any then tagged = tagged + 1 end
-    end
-  end
-
-  dt.print(string.format(
+  local msg = string.format(
     "artemis: attached %d tag(s) to %d of %d image(s)",
-    attached, tagged, #paths))
+    attached, tagged, #work)
+  if failed > 0 then
+    msg = msg .. string.format(", %d failed (see log)", failed)
+  end
+  dt.print(msg)
 end
 
 -- --- registration -----------------------------------------------------------

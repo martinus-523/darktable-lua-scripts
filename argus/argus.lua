@@ -1,19 +1,16 @@
--- argus.lua — zero-shot image tagging with SigLIP
+-- argus.lua — zero-shot image tagging with SigLIP via darktable.ai
 --
--- Runs tagger.py (via uv) on the selected images and attaches the resulting
--- labels as hierarchical tags under Argus| (e.g. Argus|Animals|Dog,
--- Argus|Location|Indoor|Kitchen, Argus|Light|Sunset — see data/vocabulary.tsv).
--- Everything runs locally; see readme.md for the one-time uv setup.
-
-local this_module = ...
-local folder = this_module and this_module:match("^(.*[/\\])") or ""
+-- Scores the selected images against the labels in data/vocabulary.tsv with
+-- the argus-siglip model (built by tools/build_model.py, installed through
+-- darktable's AI preferences) and attaches the matches as hierarchical tags
+-- under Argus| (e.g. Argus|Animals|Dog, Argus|Location|Indoor|Kitchen).
+-- Inference runs inside darktable through the darktable.ai Lua API
+-- (darktable >= 5.6) — no Python, no external processes.
 
 local dt = require "darktable"
-local json = require(folder .. "lib/json")
 
--- `folder` is the module prefix for require(); to invoke tagger.py we need
--- this file's directory as an absolute filesystem path instead (the module
--- name is relative to darktable's lua/ directory).
+-- vocabulary.tsv lives next to this file; the module name is relative to
+-- darktable's lua/ directory, so turn it into an absolute filesystem path
 local source = debug.getinfo(1, "S").source:gsub("^@", "")
 local script_dir = source:match("^(.*[/\\])") or ""
 if script_dir:sub(1, 1) ~= "/" and not script_dir:match("^%a:[/\\]") then
@@ -22,10 +19,14 @@ end
 
 local MODULE = "argus"
 local DEFAULT_PREFIX = "Argus"
+local MODEL_ID = "argus-siglip"
 
--- the tagger emits full hierarchy paths ("Objects|Vehicles|Car"); we only
--- root them under the configurable prefix (default Argus|) so machine tags
--- stay recognizable
+-- the model squash-resizes its input to 224x224 internally, but its bicubic
+-- resize is NOT antialiased (the ONNX exporter can't emit that op). Loading
+-- at a 224px bounding box makes darktable's high-quality export resampler do
+-- the antialiased downscale; the in-graph resize then only ever upscales the
+-- short axis, where antialiasing doesn't matter
+local LOAD_MAX = 224
 
 -- --- preferences ------------------------------------------------------------
 
@@ -71,7 +72,7 @@ dt.preferences.register(
 dt.preferences.register(
   MODULE, "topk_extra", "integer",
   "argus: max extra tags",
-  "At most this many tags from the user-editable extra list per image",
+  "At most this many tags from the extra list per image",
   3, 0, 20
 )
 
@@ -83,38 +84,6 @@ dt.preferences.register(
 )
 
 -- --- helpers ----------------------------------------------------------------
-
-local function quote(arg)
-  return '"' .. tostring(arg):gsub('"', '\\"') .. '"'
-end
-
--- number-to-string that ignores the locale (a Dutch locale would otherwise
--- render 0.15 as "0,15" and break the tagger's argument parsing) and trims
--- float32 noise like 0.0010000000474975 from preference values
-local function fmt_num(x)
-  return (string.format("%.6g", x):gsub(",", "."))
-end
-
--- darktable launched from the GUI often has a minimal PATH, so look for uv
--- in the usual install locations before falling back to the bare name.
-local function find_uv()
-  local home = os.getenv("HOME") or ""
-  local candidates = {
-    home .. "/.local/bin/uv",
-    "/opt/homebrew/bin/uv",
-    "/usr/local/bin/uv",
-    "/usr/bin/uv",
-  }
-  for _, path in ipairs(candidates) do
-    local f = io.open(path, "r")
-    if f then f:close() return path end
-  end
-  return "uv"
-end
-
-local function tagger_path()
-  return script_dir .. "tagger.py"
-end
 
 -- the configured tag root including the trailing "|", e.g. "Argus|"
 local function tag_prefix()
@@ -137,12 +106,77 @@ local function has_argus_tag(image, prefix)
   return false
 end
 
-local function read_file(path)
+-- Read vocabulary.tsv in file order: index i here is score index i-1 in
+-- the model output, because build_model.py bakes the labels in the same
+-- order with the same skip rules (comments, blanks, rows without label
+-- or group). Returns a list of { group = ..., path = ... }.
+local FALLBACK_BRANCH = { scene = "Location", object = "Objects" }
+
+local function load_vocabulary()
+  local path = script_dir .. "data/vocabulary.tsv"
   local f = io.open(path, "r")
-  if not f then return nil end
-  local content = f:read("*a")
+  if not f then return nil, "cannot read " .. path end
+  local labels = {}
+  for line in f:lines() do
+    local trimmed = line:gsub("\r$", ""):match("^%s*(.-)%s*$")
+    if trimmed ~= "" and trimmed:sub(1, 1) ~= "#" then
+      local cols = {}
+      for col in (trimmed .. "\t"):gmatch("(.-)\t") do
+        cols[#cols + 1] = col:match("^%s*(.-)%s*$")
+      end
+      local label, group, tagpath = cols[1], cols[2], cols[3]
+      if label and label ~= "" and group and group ~= "" then
+        if not tagpath or tagpath == "" then
+          local branch = FALLBACK_BRANCH[group]
+            or (group:sub(1, 1):upper() .. group:sub(2):lower())
+          tagpath = branch .. "|" .. label
+        end
+        labels[#labels + 1] = { group = group, path = tagpath }
+      end
+    end
+  end
   f:close()
-  return content
+  return labels
+end
+
+-- Run one image through the model and attach its tags.
+-- Returns the number of tags attached.
+local function tag_one(ctx, image, labels, prefix, threshold, topk)
+  -- darktable delivers the develop-pipeline output as scene-linear RGB;
+  -- SigLIP was trained on gamma-encoded images
+  local input = dt.ai.load_image(image, LOAD_MAX, LOAD_MAX)
+  input:linear_to_srgb()
+
+  local scores = ctx:run(input)
+  local n = scores:shape()[2]
+  if n ~= #labels then
+    error(string.format(
+      "model scores %d labels but vocabulary.tsv has %d — rebuild the "
+      .. "model with tools/build_model.py", n, #labels))
+  end
+
+  -- bucket the scores that clear the threshold by vocabulary group
+  local per_group = {}
+  for i = 1, n do
+    local s = scores:get({0, i - 1})
+    if s >= threshold then
+      local group = labels[i].group
+      per_group[group] = per_group[group] or {}
+      local bucket = per_group[group]
+      bucket[#bucket + 1] = { score = s, path = labels[i].path }
+    end
+  end
+
+  local attached = 0
+  for group, entries in pairs(per_group) do
+    table.sort(entries, function(a, b) return a.score > b.score end)
+    local cap = topk[group] or topk.extra
+    for k = 1, math.min(cap, #entries) do
+      dt.tags.attach(dt.tags.create(prefix .. entries[k].path), image)
+      attached = attached + 1
+    end
+  end
+  return attached
 end
 
 -- --- main action ------------------------------------------------------------
@@ -152,112 +186,79 @@ local function tag_images(images)
     dt.print("argus: no images selected")
     return
   end
+  if not dt.ai then
+    dt.print("argus: this darktable has no AI support (needs darktable ≥ 5.6)")
+    return
+  end
 
-  -- keep only images the run should touch, remembering each by its full path
-  local by_path = {}
+  local labels, err = load_vocabulary()
+  if not labels then
+    dt.print("argus: " .. err)
+    return
+  end
+
+  -- keep only images the run should touch
   local prefix = tag_prefix()
   local skip_tagged = dt.preferences.read(MODULE, "skip_tagged", "bool")
-  local paths = {}
+  local work = {}
   for _, image in ipairs(images) do
     if not (skip_tagged and has_argus_tag(image, prefix)) then
-      local path = image.path .. "/" .. image.filename
-      paths[#paths + 1] = path
-      by_path[path] = image
+      work[#work + 1] = image
     end
   end
-  if #paths == 0 then
+  if #work == 0 then
     dt.print("argus: all selected images already have " .. prefix .. " tags")
     return
   end
 
-  local tmp = dt.configuration.tmp_dir
-  local paths_file = tmp .. "/argus-paths.txt"
-  local json_file = tmp .. "/argus-tags.json"
-  local log_file = tmp .. "/argus.log"
-  local progress_file = tmp .. "/argus-progress.txt"
-
-  local f = io.open(paths_file, "w")
-  if not f then
-    dt.print("argus: cannot write " .. paths_file)
+  local ok, ctx = pcall(dt.ai.load_model, MODEL_ID)
+  if not ok or not ctx then
+    dt.print("argus: cannot load model '" .. MODEL_ID .. "' — build it "
+             .. "with tools/build_model.py and install the .dtmodel in "
+             .. "preferences → AI (see readme)")
+    dt.print_log("argus: load_model: " .. tostring(ctx))
     return
   end
-  f:write(table.concat(paths, "\n"), "\n")
-  f:close()
-  os.remove(json_file)
-  os.remove(progress_file)
 
-  local command = table.concat({
-    quote(find_uv()), "run", quote(tagger_path()),
-    "--in", quote(paths_file),
-    "--out", quote(json_file),
-    "--threshold", fmt_num(dt.preferences.read(MODULE, "threshold", "float")),
-    "--topk-scene", fmt_num(dt.preferences.read(MODULE, "topk_scene", "integer")),
-    "--topk-object", fmt_num(dt.preferences.read(MODULE, "topk_object", "integer")),
-    "--topk-extra", fmt_num(dt.preferences.read(MODULE, "topk_extra", "integer")),
-    "--progress", quote(progress_file),
-  }, " ") .. " 2> " .. quote(log_file)
+  local threshold = dt.preferences.read(MODULE, "threshold", "float")
+  local topk = {
+    scene = dt.preferences.read(MODULE, "topk_scene", "integer"),
+    object = dt.preferences.read(MODULE, "topk_object", "integer"),
+    -- any group beyond scene/object gets the extra cap
+    extra = dt.preferences.read(MODULE, "topk_extra", "integer"),
+  }
 
-  dt.print(string.format("argus: tagging %d image(s)…", #paths))
-  dt.print_log("argus: " .. command)
-
-  -- dt.control.execute yields this coroutine while the tagger runs, so a
-  -- dispatched sibling can poll the progress file the tagger overwrites
-  -- after every batch and move a progress bar (bottom left). The bar sits
-  -- at 0% while the model loads, which dominates the very first run.
+  dt.print(string.format("argus: tagging %d image(s)…", #work))
   local job = dt.gui.create_job(
-    string.format("argus: tagging %d image(s)", #paths), true)
-  local finished = false
-  dt.control.dispatch(function()
-    while not finished do
-      dt.control.sleep(500)
-      if finished then break end
-      local done, total = (read_file(progress_file) or ""):match("^(%d+)%s+(%d+)")
-      if total and tonumber(total) > 0 then
-        job.percent = tonumber(done) / tonumber(total)
-      end
-    end
-  end)
+    string.format("argus: tagging %d image(s)", #work), true,
+    function(j) j.valid = false end)
 
-  local rc = dt.control.execute(command)
-  finished = true
+  local tagged, attached, failed = 0, 0, 0
+  for i, image in ipairs(work) do
+    if not job.valid then break end
+    local ran, result = pcall(tag_one, ctx, image, labels, prefix,
+                              threshold, topk)
+    if ran then
+      attached = attached + result
+      if result > 0 then tagged = tagged + 1 end
+    else
+      failed = failed + 1
+      dt.print_log(string.format("argus: %s failed: %s",
+                                 image.filename, tostring(result)))
+    end
+    if job.valid then job.percent = i / #work end
+  end
+
+  ctx:close()
   job.valid = false
 
-  if rc ~= 0 then
-    dt.print("argus: tagger failed (exit " .. rc .. "), see " .. log_file)
-    return
-  end
-
-  local content = read_file(json_file)
-  if not content then
-    dt.print("argus: tagger produced no output, see " .. log_file)
-    return
-  end
-  local ok, results = pcall(json.decode, content)
-  if not ok or type(results) ~= "table" then
-    dt.print("argus: cannot parse tagger output: " .. tostring(results))
-    return
-  end
-
-  local tagged, attached = 0, 0
-  for path, groups in pairs(results) do
-    local image = by_path[path]
-    if image then
-      local any = false
-      for _, group_entries in pairs(groups) do
-        for _, entry in ipairs(group_entries) do
-          local tag = dt.tags.create(prefix .. entry[1])
-          dt.tags.attach(tag, image)
-          attached = attached + 1
-          any = true
-        end
-      end
-      if any then tagged = tagged + 1 end
-    end
-  end
-
-  dt.print(string.format(
+  local msg = string.format(
     "argus: attached %d tag(s) to %d of %d image(s)",
-    attached, tagged, #paths))
+    attached, tagged, #work)
+  if failed > 0 then
+    msg = msg .. string.format(", %d failed (see log)", failed)
+  end
+  dt.print(msg)
 end
 
 -- --- registration -----------------------------------------------------------
