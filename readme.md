@@ -8,6 +8,8 @@ This repository contains a collection of lua scripts for darktable.
 
 - **find_missing_raster_mask** this script searches in the library and tags all photo's for which the raster mask is missing with the tag *missing-raster-mask*.
 
+- **iphone_import** darktable does not natively support iphone 'raw' files. This script - macOS only - checks upon import if a DNG file is created with an apple defines and uses the Adobe DNG converter tool to converter the file to somehting darktable can handle.
+
 ## Argus
 Argus tags the selected images with subject and scene keywords, fully
 locally, using a zero-shot image-recognition model (SigLIP) that runs
