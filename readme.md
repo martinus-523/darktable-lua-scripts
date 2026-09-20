@@ -8,7 +8,9 @@ This repository contains a collection of lua scripts for darktable.
 
 - **find_missing_raster_mask** this script searches in the library and tags all photo's for which the raster mask is missing with the tag *missing-raster-mask*.
 
-- **iphone_import** darktable does not natively support iphone 'raw' files. This script - macOS only - checks upon import if a DNG file is created with an apple defines and uses the Adobe DNG converter tool to converter the file to somehting darktable can handle.
+- **gpx_import** geotags images on import from GPX tracks. When an imported image has no GPS position and its folder contains one or more `.gpx` files, the script asks exiftool to interpolate latitude, longitude and elevation from those tracks at the capture time and stores them in darktable. Image files are not modified. The timezone of the capture time is read from the image's EXIF `OffsetTimeOriginal`; for cameras that do not write it, an offset (e.g. `+02:00`) can be set in the lua options tab, and with an empty offset the local timezone of the computer is used. The exiftool path is also configurable there.
+
+- **iphone_import** darktable does not natively support iphone 'raw' files. This script - macOS only - checks upon import if a DNG file is created with an apple defines and uses the Adobe DNG converter tool to converter the file to somehting darktable can handle. ExifTool and Adobe DNG Converter are required.
 
 ## Argus
 Argus tags the selected images with subject and scene keywords, fully
